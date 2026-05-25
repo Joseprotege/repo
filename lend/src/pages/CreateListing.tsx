@@ -46,7 +46,10 @@ export const CreateListing: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newListing: Listing = {
-      id: `l_new_${Date.now()}`,
+      // Use a real UUID so the /listing/:id URL works whether or not Supabase is active.
+      // We pass this same ID to the DB insert, so both the optimistic update and the
+      // persisted row share the same identifier.
+      id: crypto.randomUUID(),
       requesterId: currentUser.id,
       title,
       description,

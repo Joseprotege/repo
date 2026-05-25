@@ -5,6 +5,7 @@ import {
   User as UserIcon, LogOut, ChevronDown, Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { Avatar } from '../common/Avatar';
 import { BroadcastCard } from '../common/CommunityPulse';
 
@@ -15,6 +16,7 @@ export const Navbar: React.FC = () => {
     currentUser, notifications, markAllRead, unreadCount,
     broadcasts, unseenBroadcastCount, markBroadcastsSeen,
   } = useApp();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -287,7 +289,14 @@ export const Navbar: React.FC = () => {
                       <LayoutGrid size={15} /> Dashboard
                     </Link>
                     <hr className="my-1 border-slate-100" />
-                    <button className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 w-full text-left">
+                    <button
+                      onClick={async () => {
+                        setProfileOpen(false);
+                        await signOut();
+                        navigate('/');
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 w-full text-left"
+                    >
                       <LogOut size={15} /> Sign Out
                     </button>
                   </div>

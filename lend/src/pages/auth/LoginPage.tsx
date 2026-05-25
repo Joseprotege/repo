@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export const LoginPage: React.FC = () => {
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Redirect back to wherever the user was trying to go
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +22,7 @@ export const LoginPage: React.FC = () => {
     const { error } = await signIn(email, password);
     setLoading(false);
     if (error) { setError(error); return; }
-    navigate('/');
+    navigate(from, { replace: true });
   };
 
   return (
