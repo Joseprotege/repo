@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { ListingCard } from '../components/listing/ListingCard';
 import { CategoryBadge } from '../components/common/Badge';
 import type { Category, UrgencyLevel } from '../types';
+import { NeighborhoodSelector } from '../components/common/NeighborhoodActivity';
 
 const CATEGORIES: Category[] = [
   'home-repairs','tech-help','transportation','education',
@@ -30,6 +31,7 @@ export const Browse: React.FC = () => {
   const [openOnly, setOpenOnly] = useState(true);
   const [sort, setSort] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [neighborhood, setNeighborhood] = useState('');
 
   const toggleCat = (cat: Category) => {
     setSelectedCats(prev =>
@@ -41,6 +43,10 @@ export const Browse: React.FC = () => {
     let result = [...listings];
 
     if (openOnly) result = result.filter(l => l.status === 'open');
+    if (neighborhood) result = result.filter(l =>
+      l.location.neighborhood?.toLowerCase() === neighborhood.toLowerCase() ||
+      l.location.city.toLowerCase().includes(neighborhood.toLowerCase()),
+    );
     if (remoteOnly) result = result.filter(l => l.canBeRemote);
     if (urgency) result = result.filter(l => l.urgency === urgency);
     if (selectedCats.length > 0) result = result.filter(l => selectedCats.includes(l.category));
@@ -68,15 +74,16 @@ export const Browse: React.FC = () => {
     });
 
     return result;
-  }, [listings, openOnly, remoteOnly, urgency, selectedCats, search, sort, getOffersByListing]);
+  }, [listings, openOnly, neighborhood, remoteOnly, urgency, selectedCats, search, sort, getOffersByListing]);
 
   const clearAll = () => {
     setSearch(''); setSelectedCats([]); setUrgency('');
     setRemoteOnly(false); setOpenOnly(true);
+    setNeighborhood('');
     setParams({});
   };
 
-  const hasFilters = selectedCats.length > 0 || urgency || remoteOnly || !openOnly || search;
+  const hasFilters = selectedCats.length > 0 || urgency || remoteOnly || !openOnly || search || !!neighborhood;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 page-enter">
@@ -132,6 +139,12 @@ export const Browse: React.FC = () => {
       {/* Filter panel */}
       {showFilters && (
         <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6 shadow-sm space-y-5">
+          {/* Neighborhoods */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Neighborhood</p>
+            <NeighborhoodSelector selected={neighborhood} onSelect={setNeighborhood} />
+          </div>
+
           {/* Categories */}
           <div>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Category</p>

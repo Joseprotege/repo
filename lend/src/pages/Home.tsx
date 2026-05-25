@@ -9,6 +9,7 @@ import { ListingCard } from '../components/listing/ListingCard';
 import { Avatar } from '../components/common/Avatar';
 import { ReliabilityMeter } from '../components/common/ReliabilityMeter';
 import { CommunityPulse } from '../components/common/CommunityPulse';
+import { NeighborhoodActivity } from '../components/common/NeighborhoodActivity';
 
 const FEATURE_CARDS = [
   {
@@ -32,7 +33,7 @@ const FEATURE_CARDS = [
   {
     icon: <Heart size={22} className="text-rose-600" />,
     title: 'Return the Favor',
-    desc: 'Great connections don\'t end at one task. Help someone, and they can lend a hand back when you need it.',
+    desc: 'Great connections don\'t end at one task. Help someone, and they can reach back when you need it.',
     color: 'bg-rose-50 border-rose-100',
   },
 ];
@@ -74,15 +75,14 @@ export const Home: React.FC = () => {
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6">
-            Lend a hand.<br />
+            You already live here.<br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-emerald-300">
-              Build trust.
+              Now thrive here.
             </span>
           </h1>
 
           <p className="text-xl text-teal-100 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Post tasks you need help with. Find community members ready to step up.
-            Build real relationships through real actions.
+            Post tasks you need help with. Find neighbors ready to step up. Foster real trust through real actions — not just transactions.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -119,7 +119,7 @@ export const Home: React.FC = () => {
       {/* ── HOW IT WORKS ─────────────────────────────────────────────── */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-black text-slate-900 mb-3">How Lend Works</h2>
+          <h2 className="text-3xl font-black text-slate-900 mb-3">How Foster Works</h2>
           <p className="text-slate-500 max-w-xl mx-auto">
             A simple loop of posting, offering, completing, and building trust.
           </p>
@@ -142,7 +142,7 @@ export const Home: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900">Recent Tasks Near You</h2>
-            <p className="text-slate-500 text-sm mt-1">Open tasks in your area looking for helpers</p>
+            <p className="text-slate-500 text-sm mt-1">Open tasks in your neighborhood looking for helpers</p>
           </div>
           <Link
             to="/browse"
@@ -190,12 +190,30 @@ export const Home: React.FC = () => {
         <CommunityPulse initialCount={4} />
       </section>
 
+      {/* ── NEIGHBORHOOD ACTIVITY ──────────────────────────────── */}
+      <section className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900">Activity in Your Neighborhood</h2>
+            <p className="text-slate-500 text-sm mt-1">How alive is the community around you right now</p>
+          </div>
+          <Link to="/pulse" className="flex items-center gap-1.5 text-amber-600 hover:text-amber-700 font-semibold text-sm">
+            Full pulse <ArrowRight size={15} />
+          </Link>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {['Hyde Park', 'Mueller', 'South Congress'].map(n => (
+            <NeighborhoodActivity key={n} neighborhood={n} />
+          ))}
+        </div>
+      </section>
+
       {/* ── TOP HELPERS ──────────────────────────────────────────────── */}
       <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-black text-slate-900">Trusted Helpers in Your Area</h2>
-            <p className="text-slate-500 text-sm mt-1">Top-rated community members ready to lend a hand</p>
+            <p className="text-slate-500 text-sm mt-1">Top-rated neighbors in your area ready to step up</p>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -229,16 +247,16 @@ export const Home: React.FC = () => {
       {/* ── CTA BANNER ───────────────────────────────────────────────── */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto bg-gradient-to-r from-teal-600 to-teal-800 rounded-3xl p-10 text-center text-white shadow-xl">
-          <h2 className="text-3xl font-black mb-4">Ready to build your community credit?</h2>
+          <h2 className="text-3xl font-black mb-4">Ready to foster something real?</h2>
           <p className="text-teal-100 mb-8 text-lg max-w-xl mx-auto">
-            Every task you help with is a brick in the foundation of trust. Start lending today.
+            Every task you help with is a brick in the foundation of trust. Start fostering today.
           </p>
           <Link
             to="/browse"
             className="inline-flex items-center gap-2 bg-white text-teal-800 font-bold px-8 py-4 rounded-2xl
               hover:bg-teal-50 transition-all shadow-lg"
           >
-            Find Tasks to Help With
+            Find Tasks Near You
             <ArrowRight size={18} />
           </Link>
         </div>

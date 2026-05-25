@@ -1,4 +1,4 @@
-import type { User, Listing, Offer, Connection, Notification, CommunityBroadcast } from '../types';
+import type { User, Listing, Offer, Connection, Notification, CommunityBroadcast, NeighborhoodStats } from '../types';
 
 // ─── USERS ──────────────────────────────────────────────────────────────────
 
@@ -9,7 +9,7 @@ export const MOCK_USERS: User[] = [
     username: 'alexr',
     avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=alexr&backgroundColor=b6e3f4',
     bio: 'Handyman & tech enthusiast. Love helping neighbors get things done. Weekend warrior who can fix almost anything.',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.267, lng: -97.743, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.267, lng: -97.743, displayName: 'Austin, TX', neighborhood: 'Hyde Park' },
     joinedAt: '2024-03-12',
     reliability: {
       overall: 91,
@@ -36,7 +36,7 @@ export const MOCK_USERS: User[] = [
     username: 'mayahelps',
     avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=mayahelps&backgroundColor=ffdfbf',
     bio: 'Graduate student in computer science. Available evenings and weekends. Great at tutoring, coding help, and anything tech!',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.285, lng: -97.735, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.285, lng: -97.735, displayName: 'Austin, TX', neighborhood: 'Mueller' },
     joinedAt: '2024-05-20',
     reliability: {
       overall: 88,
@@ -63,7 +63,7 @@ export const MOCK_USERS: User[] = [
     username: 'jmalik',
     avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=jmalik&backgroundColor=c0aede',
     bio: 'Retired teacher. Happy to help with grocery runs, pet-sitting, tutoring kids, and general errands around the neighborhood.',
-    location: { city: 'Round Rock', state: 'TX', country: 'US', lat: 30.508, lng: -97.679, displayName: 'Round Rock, TX' },
+    location: { city: 'Round Rock', state: 'TX', country: 'US', lat: 30.508, lng: -97.679, displayName: 'Round Rock, TX', neighborhood: 'Old Town' },
     joinedAt: '2024-01-08',
     reliability: {
       overall: 96,
@@ -90,7 +90,7 @@ export const MOCK_USERS: User[] = [
     username: 'samtorres_tx',
     avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=samtorres&backgroundColor=d1f4e0',
     bio: 'Graphic designer & photographer. Can help with creative projects, social media, and small business branding.',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.251, lng: -97.762, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.251, lng: -97.762, displayName: 'Austin, TX', neighborhood: 'South Congress' },
     joinedAt: '2024-07-01',
     reliability: {
       overall: 74,
@@ -117,7 +117,7 @@ export const MOCK_USERS: User[] = [
     username: 'rileyp',
     avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=rileyp&backgroundColor=ffd5dc',
     bio: 'New to the platform! Moving to Austin and looking to build community while helping out where I can.',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.295, lng: -97.720, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.295, lng: -97.720, displayName: 'Austin, TX', neighborhood: 'East Austin' },
     joinedAt: '2025-01-15',
     reliability: {
       overall: 55,
@@ -144,8 +144,8 @@ export const MOCK_USERS: User[] = [
     displayName: 'You (Demo)',
     username: 'demo_user',
     avatarUrl: 'https://api.dicebear.com/9.x/personas/svg?seed=demouser&backgroundColor=bee3f8',
-    bio: 'Exploring Lend! Ready to help and get help from my community.',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.270, lng: -97.750, displayName: 'Austin, TX' },
+    bio: 'Exploring Foster! Ready to help and be helped by my community.',
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.270, lng: -97.750, displayName: 'Austin, TX', neighborhood: 'Cherrywood' },
     joinedAt: '2025-05-25',
     reliability: {
       overall: 50,
@@ -178,7 +178,7 @@ export const MOCK_LISTINGS: Listing[] = [
     description: "I'm moving to a new place just 2 miles away this Saturday. I have a couch, queen bed frame, dining table, and about 15 boxes. Would need help for maybe 3–4 hours. I'll provide lunch and drinks! Truck is already rented.",
     category: 'transportation',
     urgency: 'high',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.285, lng: -97.735, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.285, lng: -97.735, displayName: 'Austin, TX', neighborhood: 'Mueller' },
     preferredRadiusMiles: 10,
     tags: ['moving', 'heavy lifting', 'weekend', 'physical'],
     imageUrls: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80'],
@@ -198,7 +198,7 @@ export const MOCK_LISTINGS: Listing[] = [
     description: "Applying to 3 programs and need fresh eyes on my personal statement and 2 supplemental essays (total ~2,500 words). I'm particularly worried about the narrative flow and whether my story comes across clearly. Can share via Google Docs.",
     category: 'education',
     urgency: 'medium',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.295, lng: -97.720, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.295, lng: -97.720, displayName: 'Austin, TX', neighborhood: 'East Austin' },
     preferredRadiusMiles: 50,
     tags: ['writing', 'proofreading', 'grad school', 'remote ok'],
     imageUrls: ['https://images.unsplash.com/photo-1455390582262-044cdead277a?w=600&q=80'],
@@ -218,7 +218,7 @@ export const MOCK_LISTINGS: Listing[] = [
     description: "The faucet under my kitchen sink has a slow drip that's been going on for about a week. I've watched a few YouTube tutorials but don't want to risk making it worse. Looking for someone with actual plumbing experience. Parts already purchased (new cartridge + washers).",
     category: 'home-repairs',
     urgency: 'medium',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.267, lng: -97.743, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.267, lng: -97.743, displayName: 'Austin, TX', neighborhood: 'Hyde Park' },
     preferredRadiusMiles: 15,
     tags: ['plumbing', 'faucet', 'home repair', 'quick fix'],
     imageUrls: ['https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&q=80'],
@@ -237,7 +237,7 @@ export const MOCK_LISTINGS: Listing[] = [
     description: "Flying out early next Tuesday — my flight's at 8:15am out of ABIA. Would need pickup around 6am from Round Rock. Happy to cover gas + tip. Could also do a Venmo payment upfront if that's easier.",
     category: 'transportation',
     urgency: 'urgent',
-    location: { city: 'Round Rock', state: 'TX', country: 'US', lat: 30.508, lng: -97.679, displayName: 'Round Rock, TX' },
+    location: { city: 'Round Rock', state: 'TX', country: 'US', lat: 30.508, lng: -97.679, displayName: 'Round Rock, TX', neighborhood: 'Old Town' },
     preferredRadiusMiles: 30,
     tags: ['ride', 'airport', 'early morning', 'Tuesday'],
     imageUrls: ['https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=600&q=80'],
@@ -257,7 +257,7 @@ export const MOCK_LISTINGS: Listing[] = [
     description: "I'm a graphic designer (not a developer) and I want to put together a clean online portfolio. Can use Squarespace or similar. Would love someone to help set it up and show me how to update it myself. In exchange, I can design a logo or social media graphics for you!",
     category: 'tech-help',
     urgency: 'low',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.251, lng: -97.762, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.251, lng: -97.762, displayName: 'Austin, TX', neighborhood: 'South Congress' },
     preferredRadiusMiles: 25,
     tags: ['website', 'portfolio', 'squarespace', 'trade welcome'],
     imageUrls: ['https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=600&q=80'],
@@ -276,7 +276,7 @@ export const MOCK_LISTINGS: Listing[] = [
     description: "I had knee surgery two weeks ago and still can't walk my golden retriever, Biscuit, for another 3 weeks. He needs a 30-min walk each morning around 7:30am. He's very friendly and well-behaved. Could compensate with cash or cooking you a meal when I'm back on my feet!",
     category: 'caregiving',
     urgency: 'high',
-    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.267, lng: -97.743, displayName: 'Austin, TX' },
+    location: { city: 'Austin', state: 'TX', country: 'US', lat: 30.267, lng: -97.743, displayName: 'Austin, TX', neighborhood: 'Hyde Park' },
     preferredRadiusMiles: 5,
     tags: ['dog walking', 'daily', 'morning', 'pet care'],
     imageUrls: ['https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80'],
@@ -569,6 +569,64 @@ export const MOCK_BROADCASTS: CommunityBroadcast[] = [
     reactions: { heart: 61, clap: 44, spark: 29 },
   },
 ];
+
+// ─── NEIGHBORHOOD STATS ───────────────────────────────────────────────────────
+
+export const NEIGHBORHOOD_STATS: NeighborhoodStats[] = [
+  {
+    neighborhood: 'Hyde Park', city: 'Austin',
+    activeHelpers: 23, tasksCompletedMonth: 18, broadcastsThisMonth: 7,
+    avgResponseHours: 3.2, topCategories: ['home-repairs', 'errands'],
+  },
+  {
+    neighborhood: 'Mueller', city: 'Austin',
+    activeHelpers: 19, tasksCompletedMonth: 15, broadcastsThisMonth: 8,
+    avgResponseHours: 4.5, topCategories: ['caregiving', 'education'],
+  },
+  {
+    neighborhood: 'South Congress', city: 'Austin',
+    activeHelpers: 31, tasksCompletedMonth: 24, broadcastsThisMonth: 11,
+    avgResponseHours: 2.1, topCategories: ['tech-help', 'creative'],
+  },
+  {
+    neighborhood: 'East Austin', city: 'Austin',
+    activeHelpers: 27, tasksCompletedMonth: 21, broadcastsThisMonth: 9,
+    avgResponseHours: 2.8, topCategories: ['education', 'transportation'],
+  },
+  {
+    neighborhood: 'Cherrywood', city: 'Austin',
+    activeHelpers: 14, tasksCompletedMonth: 11, broadcastsThisMonth: 5,
+    avgResponseHours: 5.1, topCategories: ['errands', 'home-repairs'],
+  },
+  {
+    neighborhood: 'North Loop', city: 'Austin',
+    activeHelpers: 16, tasksCompletedMonth: 13, broadcastsThisMonth: 6,
+    avgResponseHours: 3.9, topCategories: ['education', 'caregiving'],
+  },
+  {
+    neighborhood: 'Zilker', city: 'Austin',
+    activeHelpers: 22, tasksCompletedMonth: 17, broadcastsThisMonth: 8,
+    avgResponseHours: 3.0, topCategories: ['outdoors', 'home-repairs'],
+  },
+  {
+    neighborhood: 'Bouldin Creek', city: 'Austin',
+    activeHelpers: 18, tasksCompletedMonth: 14, broadcastsThisMonth: 6,
+    avgResponseHours: 4.2, topCategories: ['creative', 'errands'],
+  },
+  {
+    neighborhood: 'Crestview', city: 'Austin',
+    activeHelpers: 20, tasksCompletedMonth: 16, broadcastsThisMonth: 7,
+    avgResponseHours: 3.6, topCategories: ['education', 'caregiving'],
+  },
+  {
+    neighborhood: 'Old Town', city: 'Round Rock',
+    activeHelpers: 11, tasksCompletedMonth: 8, broadcastsThisMonth: 4,
+    avgResponseHours: 5.8, topCategories: ['transportation', 'home-repairs'],
+  },
+];
+
+export const getNeighborhoodStats = (neighborhood: string) =>
+  NEIGHBORHOOD_STATS.find(n => n.neighborhood === neighborhood);
 
 // ─── HELPER MAPS ─────────────────────────────────────────────────────────────
 

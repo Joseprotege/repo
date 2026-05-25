@@ -1,5 +1,6 @@
 import React from 'react';
-import { CheckCircle, XCircle, MapPin, Clock, Star } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Star } from 'lucide-react';
+import { formatProximity } from '../../utils/proximity';
 import type { Offer } from '../../types';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../common/Avatar';
@@ -48,11 +49,21 @@ export const OfferCard: React.FC<Props> = ({ offer, isOwner, onAccept, onDecline
             </div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <CompletionTypeBadge type={offer.completionType} showDesc />
-              {offer.distanceMiles !== undefined && (
-                <span className="flex items-center gap-1 text-xs text-slate-500">
-                  <MapPin size={11} /> {offer.distanceMiles.toFixed(1)} mi away
-                </span>
-              )}
+              {offer.distanceMiles !== undefined && (() => {
+                const prox = formatProximity(offer.distanceMiles!);
+                return (
+                  <span className={`flex items-center gap-1 text-xs font-medium
+                    ${prox.isWalkable ? 'text-teal-600' : 'text-slate-500'}`}>
+                    <span>{prox.icon}</span>
+                    <span>{prox.label}</span>
+                    {prox.isWalkable && (
+                      <span className="text-[10px] font-bold bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full">
+                        walkable
+                      </span>
+                    )}
+                  </span>
+                );
+              })()}
               <span className="flex items-center gap-1 text-xs text-slate-500">
                 <Clock size={11} /> ~{offer.estimatedHours}h
               </span>

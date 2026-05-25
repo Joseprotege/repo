@@ -46,7 +46,7 @@ export const Dashboard: React.FC = () => {
             <h1 className="text-2xl font-black text-slate-900">
               Hey, {currentUser.displayName.split(' ')[0]}! 👋
             </h1>
-            <p className="text-slate-500 text-sm mt-0.5">Your Lend dashboard</p>
+            <p className="text-slate-500 text-sm mt-0.5">Your Foster dashboard</p>
           </div>
         </div>
         <Link

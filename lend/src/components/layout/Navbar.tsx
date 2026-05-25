@@ -58,6 +58,7 @@ export const Navbar: React.FC = () => {
     { to: '/', label: 'Home', icon: <Home size={16} /> },
     { to: '/browse', label: 'Browse', icon: <LayoutGrid size={16} /> },
     { to: '/dashboard', label: 'My Tasks', icon: <UserIcon size={16} /> },
+    { to: '/pulse', label: 'Pulse', icon: <Sparkles size={16} /> },
   ];
 
   const isActive = (to: string) => {
@@ -76,9 +77,9 @@ export const Navbar: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center shadow-sm">
-              <span className="text-white font-black text-lg leading-none">L</span>
+              <span className="text-white font-black text-lg leading-none">F</span>
             </div>
-            <span className="text-xl font-black text-slate-900 tracking-tight">Lend</span>
+            <span className="text-xl font-black text-slate-900 tracking-tight">Foster</span>
           </Link>
 
           {/* Search bar — desktop */}

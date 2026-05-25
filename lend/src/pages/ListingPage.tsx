@@ -15,6 +15,7 @@ import {
   generateBroadcastMessage,
 } from '../components/common/CommunityPulse';
 import type { CompletionType } from '../types';
+import { NeighborhoodActivity } from '../components/common/NeighborhoodActivity';
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -525,6 +526,11 @@ export const ListingPage: React.FC = () => {
               Great connections form here.
             </p>
           </div>
+
+          {/* Neighborhood activity */}
+          {listing.location.neighborhood && (
+            <NeighborhoodActivity neighborhood={listing.location.neighborhood} />
+          )}
         </div>
       </div>
     </div>

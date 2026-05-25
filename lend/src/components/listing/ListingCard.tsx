@@ -94,7 +94,9 @@ export const ListingCard: React.FC<Props> = ({ listing, compact = false }) => {
         <div className="flex items-center gap-3 text-xs text-slate-500 mb-3 flex-wrap">
           <span className="flex items-center gap-1">
             <MapPin size={11} className="text-slate-400" />
-            {listing.location.displayName}
+            {listing.location.neighborhood
+              ? `${listing.location.neighborhood}, ${listing.location.city}`
+              : listing.location.displayName}
           </span>
           <span className="flex items-center gap-1">
             <Clock size={11} className="text-slate-400" />

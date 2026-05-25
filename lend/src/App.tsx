@@ -8,6 +8,7 @@ import { ListingPage } from './pages/ListingPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreateListing } from './pages/CreateListing';
 import { Dashboard } from './pages/Dashboard';
+import { PulsePage } from './pages/PulsePage';
 import './index.css';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
               <Route path="/profile/:id"   element={<ProfilePage />} />
               <Route path="/create"        element={<CreateListing />} />
               <Route path="/dashboard"     element={<Dashboard />} />
+              <Route path="/pulse"         element={<PulsePage />} />
               <Route path="*"              element={
                 <div className="flex flex-col items-center justify-center py-32">
                   <div className="text-7xl mb-4">🗺️</div>

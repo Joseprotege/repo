@@ -22,6 +22,18 @@ export interface Location {
   lat: number;
   lng: number;
   displayName: string;
+  /** Neighborhood within the city — the primary social unit in Foster */
+  neighborhood?: string;
+}
+
+export interface NeighborhoodStats {
+  neighborhood: string;
+  city: string;
+  activeHelpers: number;       // active this week
+  tasksCompletedMonth: number;
+  broadcastsThisMonth: number;
+  avgResponseHours: number;    // avg hours from post → first offer
+  topCategories: Category[];
 }
 
 export interface ReliabilityScore {
