@@ -2,17 +2,24 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell, Plus, Search, Menu, X, Home, LayoutGrid,
-  User as UserIcon, LogOut, ChevronDown,
+  User as UserIcon, LogOut, ChevronDown, Sparkles,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../common/Avatar';
+import { BroadcastCard } from '../common/CommunityPulse';
+
+type NotifTab = 'mine' | 'nearby';
 
 export const Navbar: React.FC = () => {
-  const { currentUser, notifications, markAllRead, unreadCount } = useApp();
+  const {
+    currentUser, notifications, markAllRead, unreadCount,
+    broadcasts, unseenBroadcastCount, markBroadcastsSeen,
+  } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifTab, setNotifTab] = useState<NotifTab>('mine');
   const [profileOpen, setProfileOpen] = useState(false);
   const [search, setSearch] = useState('');
 
@@ -37,6 +44,16 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  const handleOpenNotif = () => {
+    setNotifOpen(v => !v);
+    setProfileOpen(false);
+  };
+
+  const handleTabChange = (tab: NotifTab) => {
+    setNotifTab(tab);
+    if (tab === 'nearby') markBroadcastsSeen();
+  };
+
   const navLinks = [
     { to: '/', label: 'Home', icon: <Home size={16} /> },
     { to: '/browse', label: 'Browse', icon: <LayoutGrid size={16} /> },
@@ -47,6 +64,9 @@ export const Navbar: React.FC = () => {
     if (to === '/') return location.pathname === '/';
     return location.pathname.startsWith(to);
   };
+
+  // Total badge = personal unread + unseen broadcasts
+  const totalBadge = unreadCount + unseenBroadcastCount;
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
@@ -105,54 +125,131 @@ export const Navbar: React.FC = () => {
               Post a Task
             </Link>
 
-            {/* Notifications */}
+            {/* Notifications bell */}
             <div className="relative" ref={notifRef}>
               <button
-                onClick={() => { setNotifOpen(v => !v); setProfileOpen(false); }}
+                onClick={handleOpenNotif}
                 className="relative p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors"
               >
                 <Bell size={20} />
-                {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px]
-                    font-bold rounded-full flex items-center justify-center leading-none">
-                    {unreadCount > 9 ? '9+' : unreadCount}
+                {totalBadge > 0 && (
+                  <span className={`absolute top-1 right-1 w-4 h-4 text-white text-[10px]
+                    font-bold rounded-full flex items-center justify-center leading-none
+                    ${unseenBroadcastCount > 0 && unreadCount === 0
+                      ? 'bg-amber-400'   // only community news → warm amber
+                      : 'bg-red-500'     // personal notifs → red
+                    }`}>
+                    {totalBadge > 9 ? '9+' : totalBadge}
                   </span>
                 )}
               </button>
 
               {notifOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-                    <span className="font-semibold text-slate-800">Notifications</span>
-                    {unreadCount > 0 && (
-                      <button onClick={markAllRead} className="text-xs text-teal-600 hover:text-teal-700 font-medium">
-                        Mark all read
-                      </button>
-                    )}
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50">
+                  {/* Two-tab header */}
+                  <div className="flex border-b border-slate-100">
+                    <button
+                      onClick={() => handleTabChange('mine')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-semibold transition-colors
+                        ${notifTab === 'mine'
+                          ? 'text-teal-700 border-b-2 border-teal-600 bg-teal-50/40'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <Bell size={14} />
+                      Mine
+                      {unreadCount > 0 && (
+                        <span className="w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleTabChange('nearby')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-4 py-3 text-sm font-semibold transition-colors
+                        ${notifTab === 'nearby'
+                          ? 'text-amber-700 border-b-2 border-amber-500 bg-amber-50/40'
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <Sparkles size={14} />
+                      Nearby
+                      {unseenBroadcastCount > 0 && notifTab !== 'nearby' && (
+                        <span className="w-4 h-4 bg-amber-400 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                          {unseenBroadcastCount > 9 ? '9+' : unseenBroadcastCount}
+                        </span>
+                      )}
+                    </button>
                   </div>
-                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
-                    {notifications.length === 0 ? (
-                      <div className="px-4 py-8 text-center text-sm text-slate-400">No notifications</div>
-                    ) : (
-                      notifications.slice(0, 8).map(n => (
-                        <Link
-                          key={n.id}
-                          to={n.linkTo || '#'}
-                          onClick={() => setNotifOpen(false)}
-                          className={`block px-4 py-3 hover:bg-slate-50 transition-colors
-                            ${!n.read ? 'bg-teal-50/50' : ''}`}
-                        >
-                          <div className="flex items-start gap-2">
-                            {!n.read && <span className="w-2 h-2 rounded-full bg-teal-500 mt-1.5 flex-shrink-0" />}
-                            <div className={!n.read ? '' : 'ml-4'}>
-                              <p className="text-sm font-semibold text-slate-800">{n.title}</p>
-                              <p className="text-xs text-slate-500 mt-0.5">{n.body}</p>
-                            </div>
+
+                  {/* ── MINE tab ── */}
+                  {notifTab === 'mine' && (
+                    <>
+                      {unreadCount > 0 && (
+                        <div className="flex justify-end px-4 py-2 border-b border-slate-50">
+                          <button
+                            onClick={markAllRead}
+                            className="text-xs text-teal-600 hover:text-teal-700 font-medium"
+                          >
+                            Mark all read
+                          </button>
+                        </div>
+                      )}
+                      <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-sm text-slate-400">
+                            No notifications yet
                           </div>
+                        ) : (
+                          notifications.slice(0, 8).map(n => (
+                            <Link
+                              key={n.id}
+                              to={n.linkTo || '#'}
+                              onClick={() => setNotifOpen(false)}
+                              className={`block px-4 py-3 hover:bg-slate-50 transition-colors
+                                ${!n.read ? 'bg-teal-50/50' : ''}`}
+                            >
+                              <div className="flex items-start gap-2">
+                                {!n.read && (
+                                  <span className="w-2 h-2 rounded-full bg-teal-500 mt-1.5 flex-shrink-0" />
+                                )}
+                                <div className={!n.read ? '' : 'ml-4'}>
+                                  <p className="text-sm font-semibold text-slate-800">{n.title}</p>
+                                  <p className="text-xs text-slate-500 mt-0.5">{n.body}</p>
+                                </div>
+                              </div>
+                            </Link>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* ── NEARBY tab ── */}
+                  {notifTab === 'nearby' && (
+                    <div className="max-h-96 overflow-y-auto">
+                      {/* Header context line */}
+                      <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100">
+                        <p className="text-xs text-amber-800 font-medium">
+                          Anonymous signals from people helping each other nearby.
+                          No names. No task details. Just good news.
+                        </p>
+                      </div>
+                      <div className="divide-y divide-slate-50">
+                        {broadcasts.slice(0, 6).map(b => (
+                          <BroadcastCard key={b.id} broadcast={b} compact />
+                        ))}
+                      </div>
+                      <div className="px-4 py-3 border-t border-slate-100">
+                        <Link
+                          to="/"
+                          onClick={() => setNotifOpen(false)}
+                          className="text-xs text-amber-700 hover:text-amber-800 font-semibold flex items-center justify-center gap-1"
+                        >
+                          <Sparkles size={12} />
+                          See the full Community Pulse →
                         </Link>
-                      ))
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

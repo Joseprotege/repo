@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Clock, Eye, Users, Wifi, ArrowLeft, ChevronDown, ChevronUp,
-  Share2, Flag, Send,
+  Share2, Flag, Send, Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { OfferCard } from '../components/offer/OfferCard';
@@ -11,6 +11,9 @@ import { ReliabilityMeter } from '../components/common/ReliabilityMeter';
 import {
   CategoryBadge, UrgencyBadge, StatusBadge, RemoteBadge, CompletionTypeBadge,
 } from '../components/common/Badge';
+import {
+  generateBroadcastMessage,
+} from '../components/common/CommunityPulse';
 import type { CompletionType } from '../types';
 
 function timeAgo(iso: string) {
@@ -25,7 +28,7 @@ function timeAgo(iso: string) {
 export const ListingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getListingById, getUserById, getOffersByListing, currentUser, acceptOffer, addOffer } = useApp();
+  const { getListingById, getUserById, getOffersByListing, currentUser, acceptOffer, addOffer, addBroadcast } = useApp();
 
   const listing = getListingById(id!);
   const [showOfferForm, setShowOfferForm] = useState(false);
@@ -36,6 +39,10 @@ export const ListingPage: React.FC = () => {
   const [offerHours, setOfferHours] = useState(2);
   const [expandedOffers, setExpandedOffers] = useState(false);
   const [offerSubmitted, setOfferSubmitted] = useState(false);
+  // Community broadcast prompt state
+  const [showBroadcastPrompt, setShowBroadcastPrompt] = useState(false);
+  const [broadcastNote, setBroadcastNote] = useState('');
+  const [broadcastSent, setBroadcastSent] = useState(false);
 
   if (!listing) {
     return (
@@ -56,6 +63,21 @@ export const ListingPage: React.FC = () => {
 
   const handleAccept = (offerId: string) => {
     acceptOffer(offerId, listing.id);
+    // Reveal the broadcast prompt after a brief moment
+    setTimeout(() => setShowBroadcastPrompt(true), 400);
+  };
+
+  const handleSendBroadcast = (withNote: boolean) => {
+    if (!listing) return;
+    addBroadcast({
+      areaLabel: listing.location.city,
+      category: listing.category,
+      message: generateBroadcastMessage(listing.category),
+      note: withNote && broadcastNote.trim() ? broadcastNote.trim() : undefined,
+      completedAt: new Date().toISOString(),
+    });
+    setBroadcastSent(true);
+    setShowBroadcastPrompt(false);
   };
 
   const handleSubmitOffer = (e: React.FormEvent) => {
@@ -186,6 +208,80 @@ export const ListingPage: React.FC = () => {
                 <h3 className="font-bold text-emerald-800">Helper Confirmed!</h3>
               </div>
               <OfferCard offer={acceptedOffer} isOwner={false} expanded />
+            </div>
+          )}
+
+          {/* ── COMMUNITY BROADCAST PROMPT ────────────────────────── */}
+          {showBroadcastPrompt && !broadcastSent && (
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-2xl p-5 space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={18} className="text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-amber-900 mb-0.5">Let your neighbors know something good happened?</h3>
+                  <p className="text-sm text-amber-800 leading-relaxed">
+                    We'll send a completely anonymous signal to people near you — no names, no task details,
+                    just a quiet nudge that someone in the area came through for someone else.
+                    It's optional, and it helps build a sense of safety in the community.
+                  </p>
+                </div>
+              </div>
+
+              {/* Optional note */}
+              <div>
+                <label className="block text-xs font-semibold text-amber-800 mb-1.5">
+                  Add a short anonymous note? <span className="font-normal text-amber-600">(completely optional)</span>
+                </label>
+                <textarea
+                  value={broadcastNote}
+                  onChange={e => setBroadcastNote(e.target.value)}
+                  placeholder={`e.g. "Didn't expect a neighbor to show up so quickly. This app works."`}
+                  maxLength={160}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-amber-200 bg-white/70 rounded-xl resize-none
+                    focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-amber-400"
+                />
+                <p className="text-[10px] text-amber-600 mt-1">
+                  Your name and the task title will never be included. Max 160 characters.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => handleSendBroadcast(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600
+                    text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  <Sparkles size={14} />
+                  Yes — let the neighborhood know ✨
+                </button>
+                <button
+                  onClick={() => handleSendBroadcast(false)}
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold
+                    text-amber-700 bg-white border border-amber-200 rounded-xl hover:bg-amber-50 transition-colors"
+                >
+                  Send without a note
+                </button>
+                <button
+                  onClick={() => setShowBroadcastPrompt(false)}
+                  className="px-4 py-2.5 text-sm text-amber-600 hover:text-amber-800 font-medium"
+                >
+                  Not this time
+                </button>
+              </div>
+            </div>
+          )}
+
+          {broadcastSent && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-3">
+              <Sparkles size={18} className="text-amber-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900">Signal sent to your neighborhood ✨</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  An anonymous note has been added to the Community Pulse. No one knows it was you.
+                </p>
+              </div>
             </div>
           )}
 

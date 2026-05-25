@@ -140,3 +140,30 @@ export interface Notification {
   createdAt: string;
   linkTo?: string;
 }
+
+/**
+ * An anonymous community broadcast — sent when a task connection goes well.
+ * Contains NO user identifiers, NO task titles. Just a warm signal that
+ * something good happened nearby.
+ */
+export interface CommunityBroadcast {
+  id: string;
+  /** Neighborhood / area label — deliberately vague (e.g. "Hyde Park, Austin") */
+  areaLabel: string;
+  category: Category;
+  /** Short, anonymous message describing what kind of thing happened */
+  message: string;
+  /**
+   * Optional human note added by either participant at broadcast time.
+   * Shown anonymously. Neither name nor task is included.
+   */
+  note?: string;
+  completedAt: string;
+  reactions: {
+    heart: number;
+    clap: number;
+    spark: number;
+  };
+  /** Tracks which reaction (if any) the current session user has cast */
+  myReaction?: 'heart' | 'clap' | 'spark' | null;
+}

@@ -1,4 +1,4 @@
-import type { User, Listing, Offer, Connection, Notification } from '../types';
+import type { User, Listing, Offer, Connection, Notification, CommunityBroadcast } from '../types';
 
 // ─── USERS ──────────────────────────────────────────────────────────────────
 
@@ -483,6 +483,90 @@ export const MOCK_NOTIFICATIONS: Notification[] = [
     read: true,
     createdAt: '2025-05-20T14:00:00Z',
     linkTo: '/profile/me',
+  },
+];
+
+// ─── COMMUNITY BROADCASTS ────────────────────────────────────────────────────
+// Fully anonymous positive signals. No names, no task titles — just warm proof
+// that people nearby are taking care of each other.
+
+export const MOCK_BROADCASTS: CommunityBroadcast[] = [
+  {
+    id: 'b1',
+    areaLabel: 'East Austin',
+    category: 'caregiving',
+    message: "Someone's dog got walked every morning while their neighbor recovered from surgery 🐕",
+    note: "Didn't expect a stranger to show up for three weeks straight. Genuinely touched.",
+    completedAt: '2025-05-24T09:00:00Z',
+    reactions: { heart: 41, clap: 28, spark: 17 },
+  },
+  {
+    id: 'b2',
+    areaLabel: 'Round Rock',
+    category: 'transportation',
+    message: 'A neighbor got a 6am airport ride from someone just down the street 🚗',
+    completedAt: '2025-05-25T07:30:00Z',
+    reactions: { heart: 12, clap: 9, spark: 5 },
+  },
+  {
+    id: 'b3',
+    areaLabel: 'South Congress, Austin',
+    category: 'tech-help',
+    message: "A local designer's portfolio site got built — they traded design work for it 🎨💻",
+    note: "Never thought to swap skills like this. Both of us walked away with something.",
+    completedAt: '2025-05-22T18:00:00Z',
+    reactions: { heart: 19, clap: 25, spark: 16 },
+  },
+  {
+    id: 'b4',
+    areaLabel: 'Hyde Park, Austin',
+    category: 'home-repairs',
+    message: 'A leaky kitchen faucet got fixed in under an hour — just a neighbor helping out 🔧',
+    completedAt: '2025-05-20T14:30:00Z',
+    reactions: { heart: 8, clap: 14, spark: 6 },
+  },
+  {
+    id: 'b5',
+    areaLabel: 'North Loop, Austin',
+    category: 'education',
+    message: 'Grad school application essays got a careful read from a retired teacher nearby 📚',
+    note: "She caught things I'd been blind to for weeks. Felt like having a second family member in my corner.",
+    completedAt: '2025-05-19T16:00:00Z',
+    reactions: { heart: 37, clap: 22, spark: 14 },
+  },
+  {
+    id: 'b6',
+    areaLabel: 'Mueller, Austin',
+    category: 'errands',
+    message: "Groceries were picked up and delivered for a new parent who couldn't get out 🛒",
+    completedAt: '2025-05-17T11:00:00Z',
+    reactions: { heart: 52, clap: 31, spark: 24 },
+  },
+  {
+    id: 'b7',
+    areaLabel: 'Zilker, Austin',
+    category: 'outdoors',
+    message: "A backyard summer garden got set up — what started as a task turned into a long afternoon 🌱",
+    note: "We ended up talking for two hours after we finished. Good people around here.",
+    completedAt: '2025-05-15T15:00:00Z',
+    reactions: { heart: 33, clap: 18, spark: 27 },
+  },
+  {
+    id: 'b8',
+    areaLabel: 'Bouldin Creek, Austin',
+    category: 'home-repairs',
+    message: 'A broken fence gate got repaired before a storm rolled in — neighbor came through same day 🏡',
+    completedAt: '2025-05-13T16:45:00Z',
+    reactions: { heart: 15, clap: 11, spark: 8 },
+  },
+  {
+    id: 'b9',
+    areaLabel: 'Crestview, Austin',
+    category: 'education',
+    message: 'A middle schooler got weekly math tutoring from someone two blocks away 📐',
+    note: "My kid actually looks forward to it now. That's the whole thing right there.",
+    completedAt: '2025-05-10T17:00:00Z',
+    reactions: { heart: 61, clap: 44, spark: 29 },
   },
 ];
 

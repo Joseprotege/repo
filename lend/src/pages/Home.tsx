@@ -2,12 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight, Star, Shield, MapPin, Users, Zap, Heart,
-  TrendingUp, CheckCircle,
+  TrendingUp, CheckCircle, Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ListingCard } from '../components/listing/ListingCard';
 import { Avatar } from '../components/common/Avatar';
 import { ReliabilityMeter } from '../components/common/ReliabilityMeter';
+import { CommunityPulse } from '../components/common/CommunityPulse';
 
 const FEATURE_CARDS = [
   {
@@ -155,6 +156,38 @@ export const Home: React.FC = () => {
             <ListingCard key={listing.id} listing={listing} />
           ))}
         </div>
+      </section>
+
+      {/* ── COMMUNITY PULSE ──────────────────────────────────────────── */}
+      <section className="py-14 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Section header */}
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center">
+                <Sparkles size={16} className="text-amber-600" />
+              </div>
+              <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">Community Pulse</span>
+            </div>
+            <h2 className="text-2xl font-black text-slate-900">Good things happening nearby</h2>
+            <p className="text-slate-500 text-sm mt-1.5 max-w-xl leading-relaxed">
+              When a task goes well, both sides can send an anonymous signal to the neighborhood.
+              No names. No details. Just a quiet confirmation that people around you are looking
+              out for each other — and maybe nudging you to do the same.
+            </p>
+          </div>
+          {/* Ambient trust copy */}
+          <div className="hidden lg:block flex-shrink-0 max-w-xs bg-amber-50 border border-amber-100 rounded-2xl p-4 text-xs text-amber-800 leading-relaxed">
+            <p className="font-semibold mb-1">Why anonymous?</p>
+            <p>
+              Because the point isn't to show off — it's to show that
+              the people near you are trustworthy. That changes
+              how you think about your neighbors.
+            </p>
+          </div>
+        </div>
+
+        <CommunityPulse initialCount={4} />
       </section>
 
       {/* ── TOP HELPERS ──────────────────────────────────────────────── */}
