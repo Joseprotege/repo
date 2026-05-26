@@ -15,6 +15,7 @@ import {
   generateBroadcastMessage,
 } from '../components/common/CommunityPulse';
 import { ReviewModal } from '../components/common/ReviewModal';
+import { ReportModal } from '../components/common/ReportModal';
 import type { CompletionType } from '../types';
 import { NeighborhoodActivity } from '../components/common/NeighborhoodActivity';
 
@@ -50,6 +51,8 @@ export const ListingPage: React.FC = () => {
   const [broadcastSent, setBroadcastSent] = useState(false);
   // Review modal
   const [reviewOpen, setReviewOpen] = useState(false);
+  // Report modal
+  const [reportOpen, setReportOpen] = useState(false);
 
   if (!listing) {
     return (
@@ -163,7 +166,11 @@ export const ListingPage: React.FC = () => {
                 <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                   <Share2 size={16} />
                 </button>
-                <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                <button
+                  onClick={() => setReportOpen(true)}
+                  title="Report this task"
+                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-600 transition-colors"
+                >
                   <Flag size={16} />
                 </button>
               </div>
@@ -305,6 +312,14 @@ export const ListingPage: React.FC = () => {
               />
             );
           })()}
+
+          {reportOpen && (
+            <ReportModal
+              targetType="listing"
+              targetId={listing.id}
+              onClose={() => setReportOpen(false)}
+            />
+          )}
 
           {/* ── COMMUNITY BROADCAST PROMPT ────────────────────────── */}
           {showBroadcastPrompt && !broadcastSent && (
