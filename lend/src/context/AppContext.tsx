@@ -4,7 +4,7 @@ import {
   MOCK_USERS, MOCK_LISTINGS, MOCK_OFFERS, MOCK_NOTIFICATIONS, MOCK_BROADCASTS,
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 import {
   adaptProfile, adaptListing, adaptOffer, adaptNotification, adaptBroadcast,
   listingToInsert, offerToInsert, broadcastToInsert,
@@ -14,13 +14,6 @@ import { fetchBroadcasts, sendBroadcast as sendBroadcastService, reactToBroadcas
 import { fetchProfile, fetchReliability } from '../services/profiles';
 import { fetchNotifications, markAllRead as markAllReadService, subscribeToNotifications } from '../services/notifications';
 import { createOffer as createOfferService, acceptOffer as acceptOfferService } from '../services/offers';
-
-// ─── Is Supabase actually wired up? ───────────────────────────────────────────
-const SUPABASE_CONFIGURED = !!(
-  import.meta.env.VITE_SUPABASE_URL &&
-  import.meta.env.VITE_SUPABASE_ANON_KEY &&
-  !String(import.meta.env.VITE_SUPABASE_URL).includes('placeholder')
-);
 
 // ─── Context shape ────────────────────────────────────────────────────────────
 interface AppContextValue {
@@ -139,7 +132,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Load per-user data when auth state changes ────────────────────────────
   useEffect(() => {
-    if (!SUPABASE_CONFIGURED || !authUser) return;
+    if (!SUPABASE_CONFIGURED) return;
+
+    // Signed out — clear personal data so the navbar/dashboard don't keep stale info
+    if (!authUser) {
+      setCurrentUser(MOCK_USERS.find(u => u.id === 'me')!);
+      setOffers([]);
+      setNotifications([]);
+      return;
+    }
 
     // Capture the ID synchronously — closures below are safe regardless of later auth changes
     const userId = authUser.id;
