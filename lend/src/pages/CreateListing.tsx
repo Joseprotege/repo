@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, Info } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { ImageUploader } from '../components/common/ImageUploader';
 import type { Category, UrgencyLevel, Listing } from '../types';
 
 const CATEGORIES: { value: Category; label: string; icon: string }[] = [
@@ -31,6 +32,8 @@ export const CreateListing: React.FC = () => {
   const [hours, setHours] = useState(2);
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [listingId] = useState(() => crypto.randomUUID());
   const [step, setStep] = useState(1);
 
   const TOTAL_STEPS = 3;
@@ -48,8 +51,9 @@ export const CreateListing: React.FC = () => {
     const newListing: Listing = {
       // Use a real UUID so the /listing/:id URL works whether or not Supabase is active.
       // We pass this same ID to the DB insert, so both the optimistic update and the
-      // persisted row share the same identifier.
-      id: crypto.randomUUID(),
+      // persisted row share the same identifier. ID is captured up-front so any
+      // images uploaded during the wizard land in the right subfolder.
+      id: listingId,
       requesterId: currentUser.id,
       title,
       description,
@@ -62,7 +66,7 @@ export const CreateListing: React.FC = () => {
       },
       preferredRadiusMiles: radius,
       tags,
-      imageUrls: [],
+      imageUrls,
       status: 'open',
       offerIds: [],
       createdAt: new Date().toISOString(),
@@ -176,6 +180,19 @@ export const CreateListing: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                  Photos <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <ImageUploader
+                  bucket="listing-photos"
+                  value={imageUrls}
+                  onChange={setImageUrls}
+                  max={6}
+                  subfolder={listingId}
+                />
               </div>
 
               <div className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">

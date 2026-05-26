@@ -118,15 +118,32 @@ export const ListingPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Hero image */}
           {listing.imageUrls[0] && (
-            <div className="rounded-2xl overflow-hidden h-64 bg-slate-200 relative">
-              <img src={listing.imageUrls[0]} alt={listing.title} className="w-full h-full object-cover" />
-              <div className="absolute bottom-3 left-3 flex gap-2 flex-wrap">
-                <CategoryBadge category={listing.category} />
-                <UrgencyBadge urgency={listing.urgency} />
+            <div className="space-y-2">
+              <div className="rounded-2xl overflow-hidden h-64 bg-slate-200 relative">
+                <img src={listing.imageUrls[0]} alt={listing.title} className="w-full h-full object-cover" />
+                <div className="absolute bottom-3 left-3 flex gap-2 flex-wrap">
+                  <CategoryBadge category={listing.category} />
+                  <UrgencyBadge urgency={listing.urgency} />
+                </div>
+                <div className="absolute top-3 right-3">
+                  <StatusBadge status={listing.status} />
+                </div>
               </div>
-              <div className="absolute top-3 right-3">
-                <StatusBadge status={listing.status} />
-              </div>
+              {listing.imageUrls.length > 1 && (
+                <div className="grid grid-cols-4 gap-2">
+                  {listing.imageUrls.slice(1).map(url => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="aspect-square rounded-xl overflow-hidden bg-slate-100 hover:opacity-90 transition-opacity"
+                    >
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

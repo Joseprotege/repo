@@ -34,6 +34,7 @@ interface AppContextValue {
   addBroadcast: (data: Omit<CommunityBroadcast, 'id' | 'reactions' | 'myReaction'>) => void;
   reactToBroadcast: (broadcastId: string, reaction: 'heart' | 'clap' | 'spark') => void;
   markBroadcastsSeen: () => void;
+  updateCurrentUser: (updates: Partial<User>) => void;
   // Derived
   unreadCount: number;
   unseenBroadcastCount: number;
@@ -327,6 +328,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
+  /** Merge local updates into currentUser (and users[]) — persistence is the caller's job. */
+  const updateCurrentUser = useCallback((updates: Partial<User>) => {
+    setCurrentUser(prev => {
+      const merged = { ...prev, ...updates };
+      setUsers(us => us.map(u => u.id === merged.id ? merged : u));
+      return merged;
+    });
+  }, []);
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const unreadCount = notifications.filter(n => !n.read).length;
   const unseenBroadcastCount = Math.max(0, broadcasts.length - seenBroadcastCount);
@@ -346,6 +356,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addListing, addOffer, acceptOffer,
       markNotificationRead, markAllRead,
       addBroadcast, reactToBroadcast, markBroadcastsSeen,
+      updateCurrentUser,
       unreadCount, unseenBroadcastCount,
       getUserById, getListingById, getOffersByListing,
     }}>

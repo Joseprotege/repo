@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MapPin, Calendar, Shield, CheckCircle, Star, ArrowRight } from 'lucide-react';
+import { MapPin, Calendar, Shield, CheckCircle, Star, ArrowRight, Pencil } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Avatar } from '../components/common/Avatar';
 import { ReliabilityMeter } from '../components/common/ReliabilityMeter';
 import { ListingCard } from '../components/listing/ListingCard';
+import { EditProfileModal } from '../components/common/EditProfileModal';
 
 type Tab = 'listings' | 'reliability' | 'connections';
 
 export const ProfilePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { getUserById, currentUser, listings, users } = useApp();
+  const { getUserById, currentUser, listings, users, updateCurrentUser } = useApp();
   const [tab, setTab] = useState<Tab>('listings');
+  const [editing, setEditing] = useState(false);
 
   const userId = id === 'me' ? 'me' : id!;
   const user = getUserById(userId);
@@ -58,9 +60,17 @@ export const ProfilePage: React.FC = () => {
               <div className="flex items-start gap-3 flex-wrap">
                 <h1 className="text-3xl font-black">{user.displayName}</h1>
                 {isMe && (
-                  <span className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full mt-1">
-                    That's you!
-                  </span>
+                  <>
+                    <span className="text-sm font-semibold bg-white/20 px-3 py-1 rounded-full mt-1">
+                      That's you!
+                    </span>
+                    <button
+                      onClick={() => setEditing(true)}
+                      className="flex items-center gap-1 text-xs font-semibold bg-white/15 hover:bg-white/25 transition-colors px-3 py-1.5 rounded-full mt-1"
+                    >
+                      <Pencil size={12} /> Edit profile
+                    </button>
+                  </>
                 )}
               </div>
               <p className="text-white/70 text-sm mb-2">@{user.username}</p>
@@ -274,6 +284,14 @@ export const ProfilePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {editing && isMe && (
+        <EditProfileModal
+          user={user}
+          onClose={() => setEditing(false)}
+          onSaved={updates => updateCurrentUser(updates)}
+        />
+      )}
     </div>
   );
 };
