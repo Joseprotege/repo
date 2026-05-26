@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Clock, Eye, Users, Wifi, ArrowLeft, ChevronDown, ChevronUp,
-  Share2, Flag, Send, Sparkles,
+  Share2, Flag, Send, Sparkles, CheckCircle2, Star,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { OfferCard } from '../components/offer/OfferCard';
@@ -14,6 +14,7 @@ import {
 import {
   generateBroadcastMessage,
 } from '../components/common/CommunityPulse';
+import { ReviewModal } from '../components/common/ReviewModal';
 import type { CompletionType } from '../types';
 import { NeighborhoodActivity } from '../components/common/NeighborhoodActivity';
 
@@ -29,7 +30,10 @@ function timeAgo(iso: string) {
 export const ListingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getListingById, getUserById, getOffersByListing, currentUser, acceptOffer, addOffer, addBroadcast } = useApp();
+  const {
+    getListingById, getUserById, getOffersByListing, currentUser,
+    acceptOffer, addOffer, addBroadcast, completeOffer, rateOffer,
+  } = useApp();
 
   const listing = getListingById(id!);
   const [showOfferForm, setShowOfferForm] = useState(false);
@@ -44,6 +48,8 @@ export const ListingPage: React.FC = () => {
   const [showBroadcastPrompt, setShowBroadcastPrompt] = useState(false);
   const [broadcastNote, setBroadcastNote] = useState('');
   const [broadcastSent, setBroadcastSent] = useState(false);
+  // Review modal
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   if (!listing) {
     return (
@@ -220,14 +226,85 @@ export const ListingPage: React.FC = () => {
 
           {/* Accepted offer highlight */}
           {acceptedOffer && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2">
                 <span className="text-lg">✅</span>
-                <h3 className="font-bold text-emerald-800">Helper Confirmed!</h3>
+                <h3 className="font-bold text-emerald-800">
+                  {listing.status === 'completed' ? 'Task complete!' : 'Helper Confirmed!'}
+                </h3>
               </div>
               <OfferCard offer={acceptedOffer} isOwner={false} expanded />
+
+              {/* Mark as complete — owner only, while in-progress */}
+              {isOwner && listing.status === 'in-progress' && (
+                <div className="pt-2 border-t border-emerald-200">
+                  <button
+                    onClick={() => {
+                      completeOffer(acceptedOffer.id, listing.id);
+                      setShowBroadcastPrompt(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700
+                      text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    <CheckCircle2 size={16} /> Mark task complete
+                  </button>
+                  <p className="text-xs text-emerald-700 mt-2 text-center">
+                    Once you mark this complete, you'll be able to leave a review.
+                  </p>
+                </div>
+              )}
+
+              {/* Leave a review — both parties, only after completion, only if not yet rated */}
+              {listing.status === 'completed' && (
+                <div className="pt-2 border-t border-emerald-200 space-y-2">
+                  {(() => {
+                    const meIsOwner = isOwner;
+                    const meIsHelper = acceptedOffer.offererId === currentUser.id;
+                    const myRating = meIsOwner
+                      ? acceptedOffer.ratingByRequester
+                      : meIsHelper ? acceptedOffer.ratingByHelper : undefined;
+
+                    if (!meIsOwner && !meIsHelper) return null;
+                    if (myRating) {
+                      return (
+                        <div className="flex items-center justify-center gap-1.5 text-sm text-emerald-700 font-semibold">
+                          <Star size={14} className="fill-amber-400 text-amber-400" />
+                          You rated this {myRating}/5. Thanks for the feedback!
+                        </div>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={() => setReviewOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600
+                          text-white font-bold py-2.5 rounded-xl transition-colors"
+                      >
+                        <Star size={16} /> Leave a review
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           )}
+
+          {/* Review modal */}
+          {reviewOpen && acceptedOffer && (() => {
+            const meIsOwner = isOwner;
+            const meIsHelper = acceptedOffer.offererId === currentUser.id;
+            if (!meIsOwner && !meIsHelper) { setReviewOpen(false); return null; }
+            const subjectId = meIsOwner ? acceptedOffer.offererId : listing.requesterId;
+            const subject = getUserById(subjectId);
+            if (!subject) { setReviewOpen(false); return null; }
+            return (
+              <ReviewModal
+                subject={subject}
+                raterRole={meIsOwner ? 'requester' : 'helper'}
+                onClose={() => setReviewOpen(false)}
+                onSubmit={(rating, note) => rateOffer(acceptedOffer.id, meIsOwner ? 'requester' : 'helper', rating, note)}
+              />
+            );
+          })()}
 
           {/* ── COMMUNITY BROADCAST PROMPT ────────────────────────── */}
           {showBroadcastPrompt && !broadcastSent && (

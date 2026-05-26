@@ -13,7 +13,12 @@ import { fetchOpenListings, createListing as createListingService, subscribeToLi
 import { fetchBroadcasts, sendBroadcast as sendBroadcastService, reactToBroadcast as reactToBroadcastService, subscribeToBroadcasts } from '../services/broadcasts';
 import { fetchProfile, fetchReliability } from '../services/profiles';
 import { fetchNotifications, markAllRead as markAllReadService, subscribeToNotifications } from '../services/notifications';
-import { createOffer as createOfferService, acceptOffer as acceptOfferService } from '../services/offers';
+import {
+  createOffer as createOfferService,
+  acceptOffer as acceptOfferService,
+  completeOffer as completeOfferService,
+  submitRating as submitRatingService,
+} from '../services/offers';
 
 // ─── Context shape ────────────────────────────────────────────────────────────
 interface AppContextValue {
@@ -29,6 +34,8 @@ interface AppContextValue {
   addListing: (listing: Listing) => void;
   addOffer: (offer: Offer) => void;
   acceptOffer: (offerId: string, listingId: string) => void;
+  completeOffer: (offerId: string, listingId: string) => void;
+  rateOffer: (offerId: string, by: 'requester' | 'helper', rating: number, note?: string) => void;
   markNotificationRead: (notifId: string) => void;
   markAllRead: () => void;
   addBroadcast: (data: Omit<CommunityBroadcast, 'id' | 'reactions' | 'myReaction'>) => void;
@@ -263,6 +270,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  const completeOffer = useCallback((offerId: string, listingId: string) => {
+    // Optimistic update
+    setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'completed' } : o));
+    setListings(prev => prev.map(l =>
+      l.id === listingId ? { ...l, status: 'completed', updatedAt: new Date().toISOString() } : l,
+    ));
+
+    if (SUPABASE_CONFIGURED) {
+      completeOfferService(offerId, listingId)
+        .catch(err => console.error('[AppContext] completeOffer DB error:', err));
+    }
+  }, []);
+
+  const rateOffer = useCallback((
+    offerId: string,
+    by: 'requester' | 'helper',
+    rating: number,
+    note?: string,
+  ) => {
+    // Optimistic update
+    setOffers(prev => prev.map(o => {
+      if (o.id !== offerId) return o;
+      return by === 'requester'
+        ? { ...o, ratingByRequester: rating, ratingNoteByRequester: note }
+        : { ...o, ratingByHelper: rating, ratingNoteByHelper: note };
+    }));
+
+    if (SUPABASE_CONFIGURED) {
+      submitRatingService(offerId, by, rating, note)
+        .catch(err => console.error('[AppContext] rateOffer DB error:', err));
+    }
+  }, []);
+
   const markNotificationRead = useCallback((notifId: string) => {
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
   }, []);
@@ -353,7 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, users, listings, offers, notifications, broadcasts,
       loading,
-      addListing, addOffer, acceptOffer,
+      addListing, addOffer, acceptOffer, completeOffer, rateOffer,
       markNotificationRead, markAllRead,
       addBroadcast, reactToBroadcast, markBroadcastsSeen,
       updateCurrentUser,
