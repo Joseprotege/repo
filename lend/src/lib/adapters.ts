@@ -8,7 +8,8 @@
 import type {
   User, Listing, Offer, Notification, CommunityBroadcast,
   ReliabilityScore, Category, UrgencyLevel, ListingStatus,
-  OfferStatus, CompletionType,
+  OfferStatus, CompletionType, TaskStep, TaskMessage, PaymentRequest,
+  TaskMessageType,
 } from '../types';
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -132,6 +133,7 @@ export function adaptListing(row: Record<string, unknown>): Listing {
     canBeRemote: bool(row.can_be_remote),
     estimatedHours: num(row.estimated_hours, 2),
     views: num(row.views),
+    taskSteps: arr<TaskStep>(row.task_steps),
   };
 }
 
@@ -156,6 +158,7 @@ export function listingToInsert(listing: Listing): Record<string, unknown> {
     can_be_remote: listing.canBeRemote,
     estimated_hours: listing.estimatedHours,
     status: listing.status === 'in-progress' ? 'in_progress' : listing.status,
+    task_steps: listing.taskSteps,
   };
 }
 
@@ -183,6 +186,45 @@ export function adaptOffer(row: Record<string, unknown>): Offer {
     ratingByHelper: typeof ratingHelp === 'number' ? ratingHelp : undefined,
     distanceMiles: typeof row.distance_miles === 'number' ? num(row.distance_miles) : undefined,
     returnFavorPending: bool(row.return_favor_pending),
+    currentStepIndex: num(row.current_step_index, 0),
+    stepsCompleted: bool(row.steps_completed),
+    requestedAmount: num(row.requested_amount_cents, 0),
+  };
+}
+
+// ── TASK MESSAGE ROW → TASK MESSAGE ──────────────────────────────────────────
+
+export function adaptTaskMessage(row: Record<string, unknown>): TaskMessage {
+  return {
+    id: str(row.id),
+    listingId: str(row.listing_id),
+    offerId: str(row.offer_id),
+    senderId: typeof row.sender_id === 'string' ? row.sender_id : null,
+    type: str(row.type, 'dm') as TaskMessageType,
+    content: str(row.content),
+    stepIndex: typeof row.step_index === 'number' ? num(row.step_index) : undefined,
+    createdAt: str(row.created_at),
+  };
+}
+
+// ── PAYMENT REQUEST ROW → PAYMENT REQUEST ────────────────────────────────────
+
+export function adaptPaymentRequest(row: Record<string, unknown>): PaymentRequest {
+  return {
+    id: str(row.id),
+    offerId: str(row.offer_id),
+    listingId: str(row.listing_id),
+    requesterId: str(row.requester_id),
+    helperId: str(row.helper_id),
+    amountCents: num(row.amount_cents),
+    currency: str(row.currency, 'usd'),
+    platformFeePct: num(row.platform_fee_pct),
+    platformFeeCents: num(row.platform_fee_cents),
+    helperPayoutCents: num(row.helper_payout_cents),
+    status: str(row.status, 'pending') as PaymentRequest['status'],
+    createdAt: str(row.created_at),
+    fundedAt: str(row.funded_at) || undefined,
+    releasedAt: str(row.released_at) || undefined,
   };
 }
 
@@ -199,6 +241,9 @@ export function offerToInsert(offer: Offer): Record<string, unknown> {
     estimated_hours: offer.estimatedHours,
     status: offer.status,
     distance_miles: offer.distanceMiles ?? null,
+    current_step_index: offer.currentStepIndex ?? 0,
+    steps_completed: offer.stepsCompleted ?? false,
+    requested_amount_cents: offer.requestedAmount ?? 0,
   };
 }
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Clock, Eye, Users, Wifi, ArrowLeft, ChevronDown, ChevronUp,
-  Share2, Flag, Send, Sparkles, CheckCircle2, Star,
+  Share2, Flag, Send, Sparkles, CheckCircle2, Star, MessageCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { OfferCard } from '../components/offer/OfferCard';
@@ -106,6 +106,9 @@ export const ListingPage: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       distanceMiles: 0.5,
+      currentStepIndex: 0,
+      stepsCompleted: false,
+      requestedAmount: 0,
     });
     setOfferSubmitted(true);
     setShowOfferForm(false);
@@ -241,6 +244,24 @@ export const ListingPage: React.FC = () => {
                 </h3>
               </div>
               <OfferCard offer={acceptedOffer} isOwner={false} expanded />
+
+              {/* Open Task Chat button — shown to both parties */}
+              {(isOwner || acceptedOffer.offererId === currentUser.id) && (
+                <div className="pt-2 border-t border-emerald-200">
+                  <Link
+                    to={`/chat/${acceptedOffer.id}`}
+                    className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700
+                      text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    <MessageCircle size={16} /> Open Task Chat
+                  </Link>
+                  {listing.taskSteps.length > 0 && (
+                    <p className="text-xs text-emerald-700 mt-1.5 text-center">
+                      {listing.taskSteps.length}-step guide ready for your helper
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Mark as complete — owner only, while in-progress */}
               {isOwner && listing.status === 'in-progress' && (

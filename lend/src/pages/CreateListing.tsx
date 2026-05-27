@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, Info } from 'lucide-react';
+import { Plus, X, Info, ListChecks } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ImageUploader } from '../components/common/ImageUploader';
-import type { Category, UrgencyLevel, Listing } from '../types';
+import { StepEditor } from '../components/listing/StepEditor';
+import type { Category, UrgencyLevel, Listing, TaskStep } from '../types';
 
 const CATEGORIES: { value: Category; label: string; icon: string }[] = [
   { value: 'home-repairs',  label: 'Home Repairs',    icon: '🔧' },
@@ -34,9 +35,10 @@ export const CreateListing: React.FC = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [listingId] = useState(() => crypto.randomUUID());
+  const [taskSteps, setTaskSteps] = useState<TaskStep[]>([]);
   const [step, setStep] = useState(1);
 
-  const TOTAL_STEPS = 3;
+  const TOTAL_STEPS = 4;
 
   const addTag = () => {
     const t = tagInput.trim().toLowerCase();
@@ -74,6 +76,7 @@ export const CreateListing: React.FC = () => {
       canBeRemote,
       estimatedHours: hours,
       views: 0,
+      taskSteps: taskSteps.map((s, i) => ({ ...s, order: i })),
     };
     addListing(newListing);
     navigate(`/listing/${newListing.id}`);
@@ -322,10 +325,35 @@ export const CreateListing: React.FC = () => {
                   Helpers outside this radius will still see your listing but proximity factors into their reliability ranking.
                 </p>
               </div>
+            </div>
+          )}
 
-              {/* Summary preview */}
+          {/* ── STEP 4: Task guide (optional) ── */}
+          {step === 4 && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Guide your helper <span className="text-slate-400 font-normal text-sm">(optional)</span></h2>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Pre-author a step-by-step guide for whoever accepts your task.
+                  Steps are delivered one at a time — the helper must acknowledge each
+                  before the next unlocks.
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-start gap-2">
+                <Info size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-700">
+                  Great for tasks like house access instructions, what to inspect first,
+                  or safety steps. You can also skip this and coordinate via chat once
+                  someone accepts.
+                </p>
+              </div>
+
+              <StepEditor value={taskSteps} onChange={setTaskSteps} />
+
+              {/* Summary */}
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Preview</p>
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Ready to post</p>
                 <p className="font-semibold text-slate-800">{title || '(no title)'}</p>
                 <p className="text-sm text-slate-600 line-clamp-2">{description || '(no description)'}</p>
                 <div className="flex flex-wrap gap-2">
@@ -335,12 +363,14 @@ export const CreateListing: React.FC = () => {
                   <span className="text-xs px-2 py-0.5 bg-white border border-slate-200 rounded-full text-slate-600">
                     ⏱ ~{hours}h
                   </span>
+                  {taskSteps.length > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full flex items-center gap-1">
+                      <ListChecks size={11} /> {taskSteps.length} step{taskSteps.length !== 1 ? 's' : ''}
+                    </span>
+                  )}
                   {canBeRemote && (
                     <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">🌐 Remote OK</span>
                   )}
-                  {tags.map(t => (
-                    <span key={t} className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full">#{t}</span>
-                  ))}
                 </div>
               </div>
             </div>

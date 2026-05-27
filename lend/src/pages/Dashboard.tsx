@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, CheckCircle, Clock, AlertTriangle, ArrowRight, Star, BarChart3,
-  Handshake, ListTodo,
+  Handshake, ListTodo, MessageCircle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ListingCard } from '../components/listing/ListingCard';
@@ -183,8 +183,26 @@ export const Dashboard: React.FC = () => {
               <p className="text-slate-500">No tasks yet. Post one and get help!</p>
             </div>
           ) : (
-            <div className="grid sm:grid-cols-2 gap-5">
-              {myListings.map(l => <ListingCard key={l.id} listing={l} />)}
+            <div className="space-y-5">
+              {myListings.map(l => {
+                const acceptedOffer = l.acceptedOfferId ? offers.find(o => o.id === l.acceptedOfferId) : null;
+                return (
+                  <div key={l.id}>
+                    <ListingCard listing={l} />
+                    {acceptedOffer && (l.status === 'in-progress' || l.status === 'completed') && (
+                      <div className="mt-2 flex justify-end">
+                        <Link
+                          to={`/chat/${acceptedOffer.id}`}
+                          className="flex items-center gap-1.5 text-xs font-bold text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg px-3 py-1.5 transition-colors"
+                        >
+                          <MessageCircle size={12} />
+                          Open Task Chat
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -202,19 +220,28 @@ export const Dashboard: React.FC = () => {
           ) : (
             myOffers.map(o => {
               const listing = listings.find(l => l.id === o.listingId);
+              const isAccepted = o.status === 'accepted' || o.status === 'completed';
               return (
                 <div key={o.id} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
                   {listing && (
-                    <Link
-                      to={`/listing/${listing.id}`}
-                      className="block px-5 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center justify-between">
+                    <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+                      <Link
+                        to={`/listing/${listing.id}`}
+                        className="flex-1 min-w-0 hover:opacity-80 transition-opacity"
+                      >
                         <p className="text-sm font-semibold text-slate-800 line-clamp-1">{listing.title}</p>
-                        <ArrowRight size={14} className="text-slate-400" />
-                      </div>
-                      <p className="text-xs text-slate-400 mt-0.5">{listing.location.displayName}</p>
-                    </Link>
+                        <p className="text-xs text-slate-400 mt-0.5">{listing.location.displayName}</p>
+                      </Link>
+                      {isAccepted && (
+                        <Link
+                          to={`/chat/${o.id}`}
+                          className="flex items-center gap-1.5 text-xs font-bold text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg px-2.5 py-1.5 transition-colors flex-shrink-0"
+                        >
+                          <MessageCircle size={12} />
+                          Task Chat
+                        </Link>
+                      )}
+                    </div>
                   )}
                   <div className="p-5">
                     <OfferCard offer={o} isOwner={false} expanded />

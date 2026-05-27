@@ -79,6 +79,109 @@ export interface User {
   verifiedId: boolean;
 }
 
+// ─── Task Step ────────────────────────────────────────────────────────────────
+
+/**
+ * A single step in the lister's pre-authored task guide.
+ * Steps are delivered one at a time to the helper in order.
+ * The helper must respond before the next step unlocks.
+ */
+export interface TaskStep {
+  id: string;
+  instruction: string;
+  hint?: string;   // optional clarifying note visible immediately
+  order: number;
+}
+
+// ─── Task Message ─────────────────────────────────────────────────────────────
+
+export type TaskMessageType =
+  | 'step_response'   // helper's reply to a queued step
+  | 'dm'              // free-form direct message from either party
+  | 'system'          // automated event (offer accepted, task complete, etc.)
+  | 'voice_request'   // helper requests voice escalation
+  | 'voice_accept'    // lister accepts the voice call
+  | 'voice_decline';  // lister declines the voice call
+
+export interface TaskMessage {
+  id: string;
+  listingId: string;
+  offerId: string;
+  senderId: string | null;   // null for system messages
+  type: TaskMessageType;
+  content: string;
+  stepIndex?: number;        // which step this response relates to
+  createdAt: string;
+}
+
+// ─── Payment ─────────────────────────────────────────────────────────────────
+
+export interface PaymentRequest {
+  id: string;
+  offerId: string;
+  listingId: string;
+  requesterId: string;
+  helperId: string;
+  amountCents: number;
+  currency: string;
+  platformFeePct: number;
+  platformFeeCents: number;
+  helperPayoutCents: number;
+  status: 'pending' | 'held' | 'released' | 'refunded' | 'cancelled';
+  createdAt: string;
+  fundedAt?: string;
+  releasedAt?: string;
+}
+
+export interface FeeTier {
+  minUsers: number;
+  maxUsers: number | null;
+  feePct: number;
+  label: string;
+  description: string;
+}
+
+/** Static fee schedule — adjustable as the platform grows. */
+export const FEE_TIERS: FeeTier[] = [
+  {
+    minUsers: 0,
+    maxUsers: 100,
+    feePct: 0,
+    label: 'Launch',
+    description: 'Free during our community-building phase',
+  },
+  {
+    minUsers: 101,
+    maxUsers: 500,
+    feePct: 3,
+    label: 'Growth',
+    description: 'Covers basic infrastructure costs',
+  },
+  {
+    minUsers: 501,
+    maxUsers: 2000,
+    feePct: 5,
+    label: 'Community',
+    description: 'Supports moderation, safety, and features',
+  },
+  {
+    minUsers: 2001,
+    maxUsers: 10000,
+    feePct: 8,
+    label: 'Scale',
+    description: 'Funds expansion and city partnerships',
+  },
+  {
+    minUsers: 10001,
+    maxUsers: null,
+    feePct: 10,
+    label: 'Platform',
+    description: 'Full platform operations and growth',
+  },
+];
+
+// ─── Offer ────────────────────────────────────────────────────────────────────
+
 export interface Offer {
   id: string;
   listingId: string;
@@ -103,7 +206,15 @@ export interface Offer {
   distanceMiles?: number;
   /** "Return the favor" reciprocal flag */
   returnFavorPending?: boolean;
+  /** Step queue progress — which step index the helper is currently on */
+  currentStepIndex: number;
+  /** True when the helper has responded to all steps */
+  stepsCompleted: boolean;
+  /** Amount the helper is asking for (in cents). 0 = volunteer. */
+  requestedAmount: number;
 }
+
+// ─── Listing ─────────────────────────────────────────────────────────────────
 
 export interface Listing {
   id: string;
@@ -128,6 +239,8 @@ export interface Listing {
   estimatedHours: number;
   /** Views count */
   views: number;
+  /** Optional step-by-step guide the lister pre-authors */
+  taskSteps: TaskStep[];
 }
 
 export interface Connection {

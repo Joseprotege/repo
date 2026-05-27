@@ -15,6 +15,8 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
 import { TermsPage } from './pages/legal/TermsPage';
 import { PrivacyPage } from './pages/legal/PrivacyPage';
+import { ChatPage } from './pages/ChatPage';
+import { FeePage } from './pages/FeePage';
 import './index.css';
 
 export default function App() {
@@ -36,6 +38,7 @@ export default function App() {
                 <Route path="/signup"      element={<SignupPage />} />
                 <Route path="/legal/terms"   element={<TermsPage />} />
                 <Route path="/legal/privacy" element={<PrivacyPage />} />
+                <Route path="/fees"          element={<FeePage />} />
 
                 {/* Protected routes — redirect to /login when Supabase is active */}
                 <Route path="/create" element={
@@ -43,6 +46,9 @@ export default function App() {
                 } />
                 <Route path="/dashboard" element={
                   <ProtectedRoute><Dashboard /></ProtectedRoute>
+                } />
+                <Route path="/chat/:offerId" element={
+                  <ProtectedRoute><ChatPage /></ProtectedRoute>
                 } />
 
                 {/* 404 */}

@@ -26,6 +26,7 @@ export const Footer: React.FC = () => (
       <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
         <span>© {new Date().getFullYear()} Foster</span>
         <div className="flex items-center gap-4">
+          <Link to="/fees" className="hover:text-slate-600">Fee Schedule</Link>
           <Link to="/legal/terms" className="hover:text-slate-600">Terms of Service</Link>
           <Link to="/legal/privacy" className="hover:text-slate-600">Privacy Policy</Link>
         </div>
