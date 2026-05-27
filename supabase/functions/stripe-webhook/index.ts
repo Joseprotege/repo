@@ -1,135 +1,80 @@
-/**
- * stripe-webhook
- * ─────────────────────────────────────────────────────────────────────────────
- * Receives webhook events from Stripe and updates Foster's database state
- * accordingly.
- *
- * Events handled:
- *   - payment_intent.amount_capturable_updated  →  payment_requests.status = 'held'
- *   - payment_intent.succeeded                  →  payment_requests.status = 'released'
- *   - payment_intent.canceled                   →  payment_requests.status = 'cancelled'
- *   - charge.refunded                           →  payment_requests.status = 'refunded'
- *   - account.updated                           →  profiles.stripe_charges_enabled etc.
- *
- * Setup:
- *   In Stripe Dashboard → Developers → Webhooks, create an endpoint pointing
- *   at <project_ref>.supabase.co/functions/v1/stripe-webhook and copy the
- *   signing secret into the STRIPE_WEBHOOK_SECRET Supabase secret.
- */
-import { jsonResponse } from '../_shared/cors.ts';
-import { getStripe, getSupabaseAdmin } from '../_shared/stripe.ts';
-import type Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&deno-std=0.224.0';
+// PASTE THIS into Supabase Dashboard → Edge Functions → "stripe-webhook"
+// NOTE: When creating this function in the dashboard, disable JWT verification
+//       (there's a toggle in the function settings — Stripe signs its own requests).
+import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&deno-std=0.224.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+function admin() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
-  const signature = req.headers.get('stripe-signature');
-  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-  if (!signature || !webhookSecret) {
-    return new Response('Missing signature or secret', { status: 400 });
-  }
+  const sig = req.headers.get('stripe-signature');
+  const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+  if (!sig || !secret) return new Response('Missing signature', { status: 400 });
 
-  const stripe = getStripe();
-  const supabase = getSupabaseAdmin();
-  const rawBody = await req.text();
+  const key = Deno.env.get('STRIPE_SECRET_KEY');
+  if (!key) return new Response('STRIPE_SECRET_KEY not set', { status: 500 });
+  const stripe = new Stripe(key, { apiVersion: '2024-06-20', httpClient: Stripe.createFetchHttpClient() });
 
+  const body = await req.text();
   let event: Stripe.Event;
   try {
-    event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecret);
+    event = await stripe.webhooks.constructEventAsync(body, sig, secret);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[stripe-webhook] signature verification failed:', msg);
-    return new Response(`Webhook signature error: ${msg}`, { status: 400 });
+    return new Response(`Signature error: ${e instanceof Error ? e.message : e}`, { status: 400 });
   }
 
+  const db = admin();
+
   try {
-    switch (event.type) {
-      case 'payment_intent.amount_capturable_updated': {
-        // Funds authorized — flip the payment_request to 'held'
-        const pi = event.data.object as Stripe.PaymentIntent;
-        const prId = pi.metadata?.payment_request_id;
-        if (prId) {
-          await supabase
-            .from('payment_requests')
-            .update({ status: 'held', funded_at: new Date().toISOString() })
-            .eq('id', prId);
-        }
-        break;
+    if (event.type === 'payment_intent.amount_capturable_updated') {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      if (pi.metadata?.payment_request_id) {
+        await db.from('payment_requests')
+          .update({ status: 'held', funded_at: new Date().toISOString() })
+          .eq('id', pi.metadata.payment_request_id);
       }
-
-      case 'payment_intent.succeeded': {
-        // Funds captured + transferred to helper — flip to 'released'
-        const pi = event.data.object as Stripe.PaymentIntent;
-        const prId = pi.metadata?.payment_request_id;
-        if (prId) {
-          const transferId = (pi.charges?.data?.[0]?.transfer as string | undefined) ?? null;
-          await supabase
-            .from('payment_requests')
-            .update({
-              status: 'released',
-              released_at: new Date().toISOString(),
-              stripe_transfer_id: transferId,
-            })
-            .eq('id', prId);
-        }
-        break;
+    } else if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      if (pi.metadata?.payment_request_id) {
+        await db.from('payment_requests').update({
+          status: 'released',
+          released_at: new Date().toISOString(),
+          stripe_transfer_id: pi.charges?.data?.[0]?.transfer as string ?? null,
+        }).eq('id', pi.metadata.payment_request_id);
       }
-
-      case 'payment_intent.canceled': {
-        const pi = event.data.object as Stripe.PaymentIntent;
-        const prId = pi.metadata?.payment_request_id;
-        if (prId) {
-          await supabase
-            .from('payment_requests')
-            .update({ status: 'cancelled' })
-            .eq('id', prId);
-        }
-        break;
+    } else if (event.type === 'payment_intent.canceled') {
+      const pi = event.data.object as Stripe.PaymentIntent;
+      if (pi.metadata?.payment_request_id) {
+        await db.from('payment_requests').update({ status: 'cancelled' })
+          .eq('id', pi.metadata.payment_request_id);
       }
-
-      case 'charge.refunded': {
-        const charge = event.data.object as Stripe.Charge;
-        const piId = typeof charge.payment_intent === 'string'
-          ? charge.payment_intent
-          : charge.payment_intent?.id;
-        if (piId) {
-          await supabase
-            .from('payment_requests')
-            .update({ status: 'refunded' })
-            .eq('stripe_payment_intent_id', piId);
-        }
-        break;
+    } else if (event.type === 'charge.refunded') {
+      const charge = event.data.object as Stripe.Charge;
+      const piId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+      if (piId) {
+        await db.from('payment_requests').update({ status: 'refunded' })
+          .eq('stripe_payment_intent_id', piId);
       }
-
-      case 'account.updated': {
-        // Helper finished onboarding — record capability flags
-        const account = event.data.object as Stripe.Account;
-        const fosterUserId = account.metadata?.foster_user_id;
-        if (fosterUserId) {
-          const detailsSubmitted = account.details_submitted ?? false;
-          const chargesEnabled   = account.charges_enabled ?? false;
-          const payoutsEnabled   = account.payouts_enabled ?? false;
-          await supabase
-            .from('profiles')
-            .update({
-              stripe_onboarded:        detailsSubmitted,
-              stripe_charges_enabled:  chargesEnabled,
-              stripe_payouts_enabled:  payoutsEnabled,
-            })
-            .eq('id', fosterUserId);
-        }
-        break;
+    } else if (event.type === 'account.updated') {
+      const account = event.data.object as Stripe.Account;
+      if (account.metadata?.foster_user_id) {
+        await db.from('profiles').update({
+          stripe_onboarded:       account.details_submitted ?? false,
+          stripe_charges_enabled: account.charges_enabled ?? false,
+          stripe_payouts_enabled: account.payouts_enabled ?? false,
+        }).eq('id', account.metadata.foster_user_id);
       }
-
-      default:
-        // Ignore irrelevant events — Stripe sends many
-        break;
     }
-
-    return jsonResponse({ received: true });
+    return new Response(JSON.stringify({ received: true }), { status: 200 });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error(`[stripe-webhook] handler error for ${event.type}:`, msg);
-    return new Response(msg, { status: 500 });
+    return new Response(e instanceof Error ? e.message : String(e), { status: 500 });
   }
 });

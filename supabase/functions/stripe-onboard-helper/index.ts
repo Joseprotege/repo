@@ -1,77 +1,76 @@
-/**
- * stripe-onboard-helper
- * ─────────────────────────────────────────────────────────────────────────────
- * Creates (or reuses) a Stripe Connect Express account for the calling helper
- * and returns an onboarding URL the frontend can redirect to.
- *
- * Inputs (JSON body):
- *   - return_url:  where Stripe sends the user after onboarding completes
- *   - refresh_url: where Stripe sends the user if the link expires before
- *                  they finish
- *
- * Returns: { url: string, account_id: string }
- */
-import { corsHeaders, jsonResponse, errorResponse } from '../_shared/cors.ts';
-import { getStripe, getSupabaseAdmin, requireUser } from '../_shared/stripe.ts';
+// PASTE THIS into Supabase Dashboard → Edge Functions → "stripe-onboard-helper"
+import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&deno-std=0.224.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+const json = (b: unknown, init: ResponseInit = {}) =>
+  new Response(JSON.stringify(b), {
+    ...init, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+const err = (msg: string, status = 400) => json({ error: msg }, { status });
+
+function getStripe() {
+  const key = Deno.env.get('STRIPE_SECRET_KEY');
+  if (!key) throw new Error('STRIPE_SECRET_KEY not set');
+  return new Stripe(key, { apiVersion: '2024-06-20', httpClient: Stripe.createFetchHttpClient() });
+}
+function admin() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
+async function getUser(req: Request) {
+  const auth = req.headers.get('Authorization');
+  if (!auth) throw new Error('Missing auth header');
+  const c = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: auth } },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await c.auth.getUser();
+  if (error || !data.user) throw new Error('Invalid token');
+  return { id: data.user.id, email: data.user.email ?? '' };
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST')   return errorResponse('Method not allowed', 405);
-
+  if (req.method !== 'POST') return err('Method not allowed', 405);
   try {
-    const user = await requireUser(req);
+    const user = await getUser(req);
     const { return_url, refresh_url } = await req.json();
-    if (!return_url || !refresh_url) {
-      return errorResponse('return_url and refresh_url are required');
-    }
+    if (!return_url || !refresh_url) return err('return_url and refresh_url required');
 
     const stripe = getStripe();
-    const supabase = getSupabaseAdmin();
+    const db = admin();
 
-    // 1. Load existing profile to see if we already created an account
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('stripe_account_id, stripe_onboarded')
-      .eq('id', user.id)
-      .single();
-    if (profileError) return errorResponse(profileError.message, 500);
+    const { data: profile } = await db
+      .from('profiles').select('stripe_account_id').eq('id', user.id).single();
 
-    let accountId = profile?.stripe_account_id as string | null;
+    let accountId: string = profile?.stripe_account_id ?? '';
 
-    // 2. Create a new Express account if needed
     if (!accountId) {
       const account = await stripe.accounts.create({
         type: 'express',
         email: user.email,
-        capabilities: {
-          card_payments: { requested: true },
-          transfers:     { requested: true },
-        },
+        capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
         business_type: 'individual',
         metadata: { foster_user_id: user.id },
       });
       accountId = account.id;
-
-      // Persist the new account ID
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ stripe_account_id: accountId })
-        .eq('id', user.id);
-      if (updateError) return errorResponse(updateError.message, 500);
+      await db.from('profiles').update({ stripe_account_id: accountId }).eq('id', user.id);
     }
 
-    // 3. Generate the onboarding link
     const link = await stripe.accountLinks.create({
-      account: accountId,
-      return_url,
-      refresh_url,
-      type: 'account_onboarding',
+      account: accountId, return_url, refresh_url, type: 'account_onboarding',
     });
 
-    return jsonResponse({ url: link.url, account_id: accountId });
+    return json({ url: link.url, account_id: accountId });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[stripe-onboard-helper] error:', msg);
-    return errorResponse(msg, 500);
+    return err(e instanceof Error ? e.message : String(e), 500);
   }
 });

@@ -1,77 +1,70 @@
-/**
- * stripe-create-payment-intent
- * ─────────────────────────────────────────────────────────────────────────────
- * Creates a Stripe PaymentIntent for a payment_request, with
- * `transfer_data[destination]=<helper_stripe_account>` and
- * `application_fee_amount=<platform_fee_cents>`, then returns the
- * client_secret so the lister can confirm payment via Stripe.js Elements.
- *
- * Inputs (JSON body):
- *   - payment_request_id: uuid of the payment_requests row
- *
- * Returns: { client_secret: string, payment_intent_id: string }
- *
- * Notes:
- *   - Caller MUST be the requester (lister) of this payment_request.
- *   - Helper MUST have stripe_onboarded = true.
- */
-import { corsHeaders, jsonResponse, errorResponse } from '../_shared/cors.ts';
-import { getStripe, getSupabaseAdmin, requireUser } from '../_shared/stripe.ts';
+// PASTE THIS into Supabase Dashboard → Edge Functions → "stripe-create-payment-intent"
+import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&deno-std=0.224.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+const json = (b: unknown, init: ResponseInit = {}) =>
+  new Response(JSON.stringify(b), {
+    ...init, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+const err = (msg: string, status = 400) => json({ error: msg }, { status });
+
+function getStripe() {
+  const key = Deno.env.get('STRIPE_SECRET_KEY');
+  if (!key) throw new Error('STRIPE_SECRET_KEY not set');
+  return new Stripe(key, { apiVersion: '2024-06-20', httpClient: Stripe.createFetchHttpClient() });
+}
+function admin() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
+async function getUser(req: Request) {
+  const auth = req.headers.get('Authorization');
+  if (!auth) throw new Error('Missing auth header');
+  const c = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+    global: { headers: { Authorization: auth } },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data, error } = await c.auth.getUser();
+  if (error || !data.user) throw new Error('Invalid token');
+  return { id: data.user.id };
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST')   return errorResponse('Method not allowed', 405);
-
+  if (req.method !== 'POST') return err('Method not allowed', 405);
   try {
-    const user = await requireUser(req);
+    const user = await getUser(req);
     const { payment_request_id } = await req.json();
-    if (!payment_request_id) return errorResponse('payment_request_id required');
+    if (!payment_request_id) return err('payment_request_id required');
 
     const stripe = getStripe();
-    const supabase = getSupabaseAdmin();
+    const db = admin();
 
-    // 1. Load the payment request
-    const { data: pr, error: prError } = await supabase
-      .from('payment_requests')
-      .select('*')
-      .eq('id', payment_request_id)
-      .single();
-    if (prError || !pr) return errorResponse(prError?.message ?? 'Not found', 404);
+    const { data: pr } = await db
+      .from('payment_requests').select('*').eq('id', payment_request_id).single();
+    if (!pr) return err('Not found', 404);
+    if (pr.requester_id !== user.id) return err('Forbidden', 403);
+    if (pr.status !== 'pending') return err(`Already ${pr.status}`, 409);
 
-    // 2. Authorize: caller must be the requester (lister)
-    if (pr.requester_id !== user.id) {
-      return errorResponse('Only the requester can fund this payment', 403);
-    }
-    if (pr.status !== 'pending') {
-      return errorResponse(`Payment is already in status '${pr.status}'`, 409);
+    const { data: helper } = await db
+      .from('profiles').select('stripe_account_id').eq('id', pr.helper_id).single();
+    if (!helper?.stripe_account_id) {
+      return err('Helper has not connected a Stripe account yet', 409);
     }
 
-    // 3. Load helper's Stripe account
-    const { data: helper, error: helperError } = await supabase
-      .from('profiles')
-      .select('stripe_account_id, stripe_charges_enabled')
-      .eq('id', pr.helper_id)
-      .single();
-    if (helperError || !helper?.stripe_account_id) {
-      return errorResponse(
-        'Helper has not connected a Stripe account. Ask them to set one up before funding.',
-        409,
-      );
-    }
-
-    // 4. Reuse existing PaymentIntent if one was already created for this PR
+    // Reuse existing PI if already created
     if (pr.stripe_payment_intent_id && pr.stripe_client_secret) {
-      return jsonResponse({
-        client_secret: pr.stripe_client_secret,
-        payment_intent_id: pr.stripe_payment_intent_id,
-      });
+      return json({ client_secret: pr.stripe_client_secret, payment_intent_id: pr.stripe_payment_intent_id });
     }
 
-    // 5. Create the PaymentIntent.
-    //    - capture_method: 'manual' so funds are authorized but NOT captured
-    //      until the lister marks the task complete (true escrow behavior).
-    //    - transfer_data.destination + application_fee_amount routes the net
-    //      payout to the helper's connected account at capture time.
     const pi = await stripe.paymentIntents.create({
       amount: pr.amount_cents,
       currency: pr.currency ?? 'usd',
@@ -81,30 +74,19 @@ Deno.serve(async (req: Request) => {
       metadata: {
         payment_request_id: pr.id,
         offer_id: pr.offer_id,
-        listing_id: pr.listing_id,
         foster_requester_id: pr.requester_id,
         foster_helper_id: pr.helper_id,
       },
     });
 
-    // 6. Persist PI ID + client secret + actual app fee
-    const { error: updateError } = await supabase
-      .from('payment_requests')
-      .update({
-        stripe_payment_intent_id: pi.id,
-        stripe_client_secret: pi.client_secret,
-        stripe_application_fee_cents: pr.platform_fee_cents,
-      })
-      .eq('id', pr.id);
-    if (updateError) return errorResponse(updateError.message, 500);
+    await db.from('payment_requests').update({
+      stripe_payment_intent_id: pi.id,
+      stripe_client_secret: pi.client_secret,
+      stripe_application_fee_cents: pr.platform_fee_cents,
+    }).eq('id', pr.id);
 
-    return jsonResponse({
-      client_secret: pi.client_secret,
-      payment_intent_id: pi.id,
-    });
+    return json({ client_secret: pi.client_secret, payment_intent_id: pi.id });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error('[stripe-create-payment-intent] error:', msg);
-    return errorResponse(msg, 500);
+    return err(e instanceof Error ? e.message : String(e), 500);
   }
 });
