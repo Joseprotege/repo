@@ -432,7 +432,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
               {/* Fee tier info */}
               <div className="text-xs text-slate-500 flex items-start gap-1.5">
                 <Info size={12} className="flex-shrink-0 mt-0.5 text-slate-400" />
-                Foster's fee scales from 0% (early community) to 10% (platform scale).
+                Foster's fee scales from 0% (early community) up to 15% (platform scale).
                 Current tier: <strong>{activeTier.label} ({feePct}%)</strong>
               </div>
 

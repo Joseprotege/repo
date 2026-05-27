@@ -141,7 +141,8 @@ export interface FeeTier {
   description: string;
 }
 
-/** Static fee schedule — adjustable as the platform grows. */
+/** Static fee schedule — adjustable as the platform grows.
+ *  Caps at 15% even at full scale, well below typical marketplace fees. */
 export const FEE_TIERS: FeeTier[] = [
   {
     minUsers: 0,
@@ -160,23 +161,23 @@ export const FEE_TIERS: FeeTier[] = [
   {
     minUsers: 501,
     maxUsers: 2000,
-    feePct: 5,
+    feePct: 6,
     label: 'Community',
     description: 'Supports moderation, safety, and features',
   },
   {
     minUsers: 2001,
     maxUsers: 10000,
-    feePct: 8,
+    feePct: 10,
     label: 'Scale',
     description: 'Funds expansion and city partnerships',
   },
   {
     minUsers: 10001,
     maxUsers: null,
-    feePct: 10,
+    feePct: 15,
     label: 'Platform',
-    description: 'Full platform operations and growth',
+    description: 'Full platform operations and growth — capped here',
   },
 ];
 
