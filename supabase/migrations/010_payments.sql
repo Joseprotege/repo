@@ -30,17 +30,20 @@ CREATE TABLE IF NOT EXISTS payment_requests (
 -- 2. RLS
 ALTER TABLE payment_requests ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "pay_select"
+DROP POLICY IF EXISTS "pay_select" ON payment_requests;
+CREATE POLICY "pay_select"
   ON payment_requests FOR SELECT
   TO authenticated
   USING (auth.uid() = requester_id OR auth.uid() = helper_id);
 
-CREATE POLICY IF NOT EXISTS "pay_insert"
+DROP POLICY IF EXISTS "pay_insert" ON payment_requests;
+CREATE POLICY "pay_insert"
   ON payment_requests FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = requester_id);
 
-CREATE POLICY IF NOT EXISTS "pay_update"
+DROP POLICY IF EXISTS "pay_update" ON payment_requests;
+CREATE POLICY "pay_update"
   ON payment_requests FOR UPDATE
   TO authenticated
   USING (auth.uid() = requester_id OR auth.uid() = helper_id);

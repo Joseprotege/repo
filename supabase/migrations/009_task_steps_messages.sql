@@ -37,7 +37,8 @@ CREATE INDEX IF NOT EXISTS idx_task_messages_offer
 ALTER TABLE task_messages ENABLE ROW LEVEL SECURITY;
 
 -- 5. SELECT: participants only (accepted helper OR lister)
-CREATE POLICY IF NOT EXISTS "task_msg_select"
+DROP POLICY IF EXISTS "task_msg_select" ON task_messages;
+CREATE POLICY "task_msg_select"
   ON task_messages FOR SELECT
   TO authenticated
   USING (
@@ -59,7 +60,8 @@ CREATE POLICY IF NOT EXISTS "task_msg_select"
   );
 
 -- 6. INSERT: only participants can post (and must be the sender)
-CREATE POLICY IF NOT EXISTS "task_msg_insert"
+DROP POLICY IF EXISTS "task_msg_insert" ON task_messages;
+CREATE POLICY "task_msg_insert"
   ON task_messages FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -79,5 +81,13 @@ CREATE POLICY IF NOT EXISTS "task_msg_insert"
     )
   );
 
--- 7. Enable Realtime for live chat
-ALTER PUBLICATION supabase_realtime ADD TABLE task_messages;
+-- 7. Enable Realtime for live chat (idempotent: skip if already added)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'task_messages'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE task_messages;
+  END IF;
+END $$;
