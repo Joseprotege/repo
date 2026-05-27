@@ -5,8 +5,13 @@
  * ICE server: public Google STUN (no credentials needed).
  *
  * State machine:
- *   idle → requesting → (accepted → connecting → active) | declined
- *   active → ended
+ *   initiator: idle → (subscribed) → requesting → connecting → active → ended
+ *   receiver:  receiving → (accept) → connecting → active → ended
+ *
+ * Late-join handling:
+ *   When the receiver subscribes to the channel, they broadcast a `ready`
+ *   signal. The initiator (if still in `requesting` state) re-sends the SDP
+ *   offer so the receiver doesn't miss it.
  */
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Phone, PhoneOff, PhoneMissed, Mic, MicOff, Volume2, VolumeX, Loader2 } from 'lucide-react';
@@ -58,6 +63,9 @@ export const VoiceCallModal: React.FC<VoiceCallModalProps> = ({
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Track current status in a ref so signal handlers don't stale-close over it
+  const statusRef = useRef<CallStatus>(initialStatus);
+  useEffect(() => { statusRef.current = status; }, [status]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -175,7 +183,15 @@ export const VoiceCallModal: React.FC<VoiceCallModalProps> = ({
     if (signal.type === 'hangup') {
       cleanup('ended');
     }
-  }, [cleanup, currentUserId, role]);
+
+    // Late-join: receiver joined after offer was sent — re-send offer
+    if (signal.type === 'ready' && role === 'initiator' && statusRef.current === 'requesting') {
+      const desc = pcRef.current?.localDescription;
+      if (desc?.sdp) {
+        sendSignal({ type: 'offer', sdp: desc.sdp, from: currentUserId });
+      }
+    }
+  }, [cleanup, currentUserId, role, sendSignal]);
 
   // ── Subscribe to signaling channel on mount ────────────────────────────────
 
@@ -187,8 +203,13 @@ export const VoiceCallModal: React.FC<VoiceCallModalProps> = ({
     ch.on('broadcast', { event: 'signal' }, ({ payload }) => {
       handleSignal(payload as VoiceSignal);
     }).subscribe(async state => {
-      if (state === 'SUBSCRIBED' && role === 'initiator') {
-        await initiateCall();
+      if (state === 'SUBSCRIBED') {
+        if (role === 'initiator') {
+          await initiateCall();
+        } else {
+          // Tell the initiator we're ready — they'll re-send offer if needed
+          sendSignal({ type: 'ready', from: currentUserId });
+        }
       }
     });
 
@@ -262,7 +283,7 @@ export const VoiceCallModal: React.FC<VoiceCallModalProps> = ({
             <Loader2 size={20} className="text-teal-400 animate-spin" />
           )}
           {status === 'active' && (
-            <div className="flex gap-1">
+            <div className="flex gap-1 items-end">
               {[0.3, 0.6, 1, 0.6, 0.3].map((h, i) => (
                 <div
                   key={i}
@@ -308,7 +329,7 @@ export const VoiceCallModal: React.FC<VoiceCallModalProps> = ({
             <div className="flex justify-center gap-4">
               <button
                 onClick={toggleMute}
-                className={`flex flex-col items-center gap-2`}
+                className="flex flex-col items-center gap-2"
               >
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors
                   ${muted ? 'bg-red-500/80' : 'bg-white/10 hover:bg-white/20'}`}>

@@ -8,7 +8,7 @@
  * Also includes the Payment panel for agreeing on compensation and releasing escrow.
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, MessageCircle, ListChecks, Phone, CheckCircle2,
   ChevronDown, ChevronUp, Send, Lock, CreditCard, Loader2,
@@ -193,13 +193,22 @@ const DMThread: React.FC<DMThreadProps> = ({ messages, currentUserId, otherUser,
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const dmMessages = messages.filter(m => m.type === 'dm' || m.type === 'system');
+  const dmMessages = messages.filter(m =>
+    m.type === 'dm' || m.type === 'system' ||
+    m.type === 'voice_request' || m.type === 'voice_accept' || m.type === 'voice_decline',
+  );
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim()) return;
     onSend(text.trim());
     setText('');
+  };
+
+  const VOICE_LABELS: Partial<Record<string, string>> = {
+    voice_request: '📞 Voice call requested',
+    voice_accept:  '✅ Voice call accepted',
+    voice_decline: '❌ Voice call declined',
   };
 
   return (
@@ -216,12 +225,19 @@ const DMThread: React.FC<DMThreadProps> = ({ messages, currentUserId, otherUser,
         {dmMessages.map(msg => {
           const isMe = msg.senderId === currentUserId;
           const isSystem = msg.type === 'system';
+          const isVoiceEvent = msg.type === 'voice_request' || msg.type === 'voice_accept' || msg.type === 'voice_decline';
 
-          if (isSystem) {
+          if (isSystem || isVoiceEvent) {
+            const label = isVoiceEvent
+              ? VOICE_LABELS[msg.type]
+              : msg.content;
             return (
               <div key={msg.id} className="text-center">
-                <span className="text-xs text-slate-400 bg-slate-100 rounded-full px-3 py-1">
-                  {msg.content}
+                <span className={`text-xs rounded-full px-3 py-1
+                  ${isVoiceEvent
+                    ? 'text-teal-700 bg-teal-50 border border-teal-200'
+                    : 'text-slate-400 bg-slate-100'}`}>
+                  {label}
                 </span>
               </div>
             );
@@ -517,6 +533,7 @@ type Tab = 'steps' | 'chat';
 export const ChatPage: React.FC = () => {
   const { offerId } = useParams<{ offerId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user: authUser } = useAuth();
   const { getListingById, getUserById, offers, currentUser, completeOffer } = useApp();
 
@@ -642,10 +659,51 @@ export const ChatPage: React.FC = () => {
 
   // ── Voice call ────────────────────────────────────────────────────────────
 
-  const openVoiceCall = (role: 'initiator' | 'receiver') => {
+  const openVoiceCall = useCallback(async (role: 'initiator' | 'receiver') => {
     setVoiceRole(role);
     setVoiceOpen(true);
-  };
+
+    // When the HELPER initiates, persist a voice_request message so the lister
+    // gets notified by GlobalVoiceListener even when off the chat page.
+    if (role === 'initiator' && offerId && listing && authUser) {
+      const optimistic: TaskMessage = {
+        id: `tmp_voice_${Date.now()}`,
+        listingId: listing.id,
+        offerId,
+        senderId: authUser.id,
+        type: 'voice_request',
+        content: 'Voice call requested',
+        createdAt: new Date().toISOString(),
+      };
+      setMessages(prev => [...prev, optimistic]);
+
+      if (SUPABASE_CONFIGURED) {
+        const saved = await sendMessage({
+          listingId: listing.id,
+          offerId,
+          senderId: authUser.id,
+          type: 'voice_request',
+          content: 'Voice call requested',
+        });
+        if (saved) {
+          setMessages(prev => prev.map(m => m.id === optimistic.id ? saved : m));
+        }
+      }
+    }
+  }, [offerId, listing, authUser]);
+
+  // ── Auto-open receiver modal when navigated from incoming call banner ──────
+
+  useEffect(() => {
+    if (searchParams.get('incoming') === '1' && isRequester && !voiceOpen && offer) {
+      setVoiceRole('receiver');
+      setVoiceOpen(true);
+      // Clear the param so a page refresh doesn't re-open the modal
+      navigate(`/chat/${offerId}`, { replace: true });
+    }
+  // Only run when the params / offer / isRequester are first resolved
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get('incoming'), isRequester, !!offer]);
 
   // ── Guard: not found ───────────────────────────────────────────────────────
 
@@ -713,7 +771,7 @@ export const ChatPage: React.FC = () => {
           {/* Voice call button — helper's privilege (last resort) */}
           {isHelper && (offer.status === 'accepted' || offer.status === 'completed') && (
             <button
-              onClick={() => openVoiceCall('initiator')}
+              onClick={() => void openVoiceCall('initiator')}
               title="Request voice call (emergency escalation)"
               className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl
                 text-slate-600 hover:border-red-300 hover:text-red-600 hover:bg-red-50
@@ -723,9 +781,9 @@ export const ChatPage: React.FC = () => {
               <span className="hidden sm:inline">Call</span>
             </button>
           )}
-          {isRequester && (
+          {isRequester && !voiceOpen && (
             <button
-              onClick={() => openVoiceCall('receiver')}
+              onClick={() => void openVoiceCall('receiver')}
               title="Ready to receive a voice call"
               className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 rounded-xl
                 text-slate-600 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50

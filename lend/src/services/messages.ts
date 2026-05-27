@@ -68,7 +68,7 @@ export async function advanceStep(
   return true;
 }
 
-// ── Realtime subscription ─────────────────────────────────────────────────────
+// ── Per-offer Realtime subscription ──────────────────────────────────────────
 
 export function subscribeToMessages(
   offerId: string,
@@ -98,13 +98,44 @@ export function subscribeToMessages(
   };
 }
 
+/**
+ * Subscribe to voice_request messages across ALL the current user's chats.
+ * RLS ensures only messages for offers the user participates in are delivered.
+ * Used by GlobalVoiceListener to surface incoming call notifications even when
+ * the user is not on the chat page.
+ */
+export function subscribeToVoiceRequests(
+  onVoiceRequest: (msg: TaskMessage) => void,
+) {
+  if (!SUPABASE_CONFIGURED) return { unsubscribe: () => {} };
+  const channel = supabase
+    .channel('global_voice_requests')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'task_messages',
+        filter: 'type=eq.voice_request',
+      },
+      payload => {
+        onVoiceRequest(adaptTaskMessage(payload.new as unknown as Record<string, unknown>));
+      },
+    )
+    .subscribe();
+  return { unsubscribe: () => supabase.removeChannel(channel) };
+}
+
 // ── Voice signaling (ephemeral broadcast channel) ─────────────────────────────
 
 export type VoiceSignal =
   | { type: 'offer'; sdp: string; from: string }
   | { type: 'answer'; sdp: string; from: string }
   | { type: 'ice'; candidate: RTCIceCandidateInit; from: string }
-  | { type: 'hangup'; from: string };
+  | { type: 'hangup'; from: string }
+  /** Sent by the receiver when they join the channel — prompts the initiator
+   *  to re-send the offer SDP so late-joining receivers don't miss it. */
+  | { type: 'ready'; from: string };
 
 /** Returns a Supabase Realtime broadcast channel for WebRTC signaling.
  *  Signals are ephemeral — they are not stored in the database. */

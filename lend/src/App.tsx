@@ -17,6 +17,7 @@ import { TermsPage } from './pages/legal/TermsPage';
 import { PrivacyPage } from './pages/legal/PrivacyPage';
 import { ChatPage } from './pages/ChatPage';
 import { FeePage } from './pages/FeePage';
+import { GlobalVoiceListener } from './components/app/GlobalVoiceListener';
 import './index.css';
 
 export default function App() {
@@ -24,6 +25,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppProvider>
+          {/* Global voice-call notifier — shows incoming call banner + fires
+              browser Notification when a voice_request arrives for this user */}
+          <GlobalVoiceListener />
           <div className="min-h-screen flex flex-col bg-slate-100">
             <Navbar />
             <main className="flex-1">
