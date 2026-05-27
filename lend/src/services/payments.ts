@@ -4,6 +4,7 @@
  * Until Stripe is wired in, this manages the payment_requests table state.
  */
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { invokeEdgeFunction, STRIPE_CONFIGURED } from '../lib/stripe';
 import { adaptPaymentRequest } from '../lib/adapters';
 import { FEE_TIERS } from '../types';
 import type { PaymentRequest, FeeTier } from '../types';
@@ -136,4 +137,93 @@ export async function cancelPayment(
     .eq('id', paymentId);
   if (error) { console.error('[payments] cancelPayment error:', error); return false; }
   return true;
+}
+
+// ── Stripe Connect ────────────────────────────────────────────────────────────
+
+/**
+ * Kicks off Stripe Connect Express onboarding for the current helper.
+ * Returns the onboarding URL the caller should redirect to.
+ */
+export async function startHelperOnboarding(opts: {
+  returnUrl: string;
+  refreshUrl: string;
+}): Promise<{ url: string | null; error: string | null }> {
+  if (!STRIPE_CONFIGURED) {
+    return { url: null, error: 'Stripe is not configured yet.' };
+  }
+  const res = await invokeEdgeFunction<{ url: string }>(
+    'stripe-onboard-helper',
+    { return_url: opts.returnUrl, refresh_url: opts.refreshUrl },
+  );
+  if (res.error || !res.data) return { url: null, error: res.error };
+  return { url: res.data.url, error: null };
+}
+
+/**
+ * Creates a Stripe PaymentIntent for an existing payment_request.
+ * Returns the client_secret the lister will use to confirm payment.
+ */
+export async function createPaymentIntent(
+  paymentRequestId: string,
+): Promise<{ clientSecret: string | null; error: string | null }> {
+  if (!STRIPE_CONFIGURED) {
+    return { clientSecret: null, error: 'Stripe is not configured yet.' };
+  }
+  const res = await invokeEdgeFunction<{ client_secret: string }>(
+    'stripe-create-payment-intent',
+    { payment_request_id: paymentRequestId },
+  );
+  if (res.error || !res.data) return { clientSecret: null, error: res.error };
+  return { clientSecret: res.data.client_secret, error: null };
+}
+
+/**
+ * Captures the held PaymentIntent, releasing escrow to the helper.
+ * Returns true on success.
+ */
+export async function releasePaymentViaStripe(
+  paymentRequestId: string,
+): Promise<{ ok: boolean; error: string | null }> {
+  if (!STRIPE_CONFIGURED) {
+    return { ok: false, error: 'Stripe is not configured yet.' };
+  }
+  const res = await invokeEdgeFunction<{ ok: boolean }>(
+    'stripe-release-payment',
+    { payment_request_id: paymentRequestId },
+  );
+  if (res.error || !res.data) return { ok: false, error: res.error };
+  return { ok: !!res.data.ok, error: null };
+}
+
+// ── Profile-side helpers ──────────────────────────────────────────────────────
+
+export interface StripeAccountStatus {
+  accountId: string | null;
+  onboarded: boolean;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+}
+
+/** Fetch the current user's Stripe Connect account status (if any). */
+export async function fetchStripeStatus(userId: string): Promise<StripeAccountStatus> {
+  const empty: StripeAccountStatus = {
+    accountId: null,
+    onboarded: false,
+    chargesEnabled: false,
+    payoutsEnabled: false,
+  };
+  if (!SUPABASE_CONFIGURED) return empty;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('stripe_account_id, stripe_onboarded, stripe_charges_enabled, stripe_payouts_enabled')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error || !data) return empty;
+  return {
+    accountId:       (data.stripe_account_id as string | null) ?? null,
+    onboarded:        !!data.stripe_onboarded,
+    chargesEnabled:   !!data.stripe_charges_enabled,
+    payoutsEnabled:   !!data.stripe_payouts_enabled,
+  };
 }

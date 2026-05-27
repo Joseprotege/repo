@@ -18,14 +18,16 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/common/Avatar';
 import { VoiceCallModal } from '../components/chat/VoiceCallModal';
+import { StripePaymentModal } from '../components/chat/StripePaymentModal';
 import {
   fetchMessages, sendMessage, subscribeToMessages, advanceStep,
 } from '../services/messages';
 import {
   fetchPaymentRequest, createPaymentRequest, releasePayment, holdPayment,
-  getActiveFeePercent, computeFeeBreakdown,
+  releasePaymentViaStripe, getActiveFeePercent, computeFeeBreakdown,
 } from '../services/payments';
 import { SUPABASE_CONFIGURED } from '../lib/supabase';
+import { STRIPE_CONFIGURED } from '../lib/stripe';
 import { FEE_TIERS } from '../types';
 import type { TaskMessage, PaymentRequest, TaskStep } from '../types';
 
@@ -327,6 +329,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   const [feePct, setFeePct] = useState(0);
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [stripeModalOpen, setStripeModalOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -360,19 +363,43 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
     setActionLoading(false);
   };
 
+  // "Fund Escrow" — uses Stripe Elements when configured; falls back to
+  // direct DB update (mock mode) when STRIPE_CONFIGURED is false.
   const handleHold = async () => {
     if (!payReq) return;
+    if (STRIPE_CONFIGURED) {
+      setStripeModalOpen(true);
+      return;
+    }
     setActionLoading(true);
     await holdPayment(payReq.id);
     setPayReq(p => p ? { ...p, status: 'held' } : p);
     setActionLoading(false);
   };
 
+  // Called by the Stripe modal once funds are authorized
+  const handleStripeAuthorized = () => {
+    setStripeModalOpen(false);
+    // Optimistic — the webhook flips the DB row but the UI should react now
+    setPayReq(p => p ? { ...p, status: 'held' } : p);
+    // Re-fetch shortly to catch the webhook update
+    setTimeout(() => {
+      fetchPaymentRequest(offerId).then(req => req && setPayReq(req));
+    }, 1500);
+  };
+
+  // "Release" — captures the held PaymentIntent via the Edge Function when
+  // Stripe is configured; falls back to direct DB update otherwise.
   const handleRelease = async () => {
     if (!payReq) return;
     setActionLoading(true);
-    await releasePayment(payReq.id);
-    setPayReq(p => p ? { ...p, status: 'released' } : p);
+    if (STRIPE_CONFIGURED) {
+      const { ok } = await releasePaymentViaStripe(payReq.id);
+      if (ok) setPayReq(p => p ? { ...p, status: 'released' } : p);
+    } else {
+      await releasePayment(payReq.id);
+      setPayReq(p => p ? { ...p, status: 'released' } : p);
+    }
     setActionLoading(false);
   };
 
@@ -480,9 +507,11 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                     {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
                     Fund Escrow via Stripe
                   </button>
-                  <p className="text-xs text-slate-400 text-center">
-                    Stripe Connect required — configure in account settings to activate
-                  </p>
+                  {!STRIPE_CONFIGURED && (
+                    <p className="text-xs text-slate-400 text-center">
+                      Stripe is not configured — clicking will mock the hold for testing
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -521,6 +550,18 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
             </>
           )}
         </div>
+      )}
+
+      {/* Stripe payment modal — opens when lister clicks Fund Escrow */}
+      {stripeModalOpen && payReq && (
+        <StripePaymentModal
+          paymentRequestId={payReq.id}
+          amountCents={payReq.amountCents}
+          platformFeeCents={payReq.platformFeeCents}
+          helperPayoutCents={payReq.helperPayoutCents}
+          onClose={() => setStripeModalOpen(false)}
+          onAuthorized={handleStripeAuthorized}
+        />
       )}
     </div>
   );
