@@ -2,10 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell, Plus, Search, Menu, X, Home, LayoutGrid,
-  User as UserIcon, LogOut, ChevronDown, Sparkles,
+  User as UserIcon, LogOut, ChevronDown, Sparkles, LogIn,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import { SUPABASE_CONFIGURED } from '../../lib/supabase';
 import { Avatar } from '../common/Avatar';
 import { BroadcastCard } from '../common/CommunityPulse';
 
@@ -16,7 +17,8 @@ export const Navbar: React.FC = () => {
     currentUser, notifications, markAllRead, unreadCount,
     broadcasts, unseenBroadcastCount, markBroadcastsSeen,
   } = useApp();
-  const { signOut } = useAuth();
+  const { signOut, user: authUser } = useAuth();
+  const isAuthed = !SUPABASE_CONFIGURED || !!authUser;
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -118,17 +120,41 @@ export const Navbar: React.FC = () => {
 
           {/* Right actions */}
           <div className="flex items-center gap-2 ml-4">
-            {/* Post listing CTA */}
-            <Link
-              to="/create"
-              className="hidden sm:flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white
-                text-sm font-semibold px-4 py-2 rounded-full transition-colors shadow-sm"
-            >
-              <Plus size={15} />
-              Post a Task
-            </Link>
+            {/* Post listing CTA — signed-in users only */}
+            {isAuthed && (
+              <Link
+                to="/create"
+                className="hidden sm:flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white
+                  text-sm font-semibold px-4 py-2 rounded-full transition-colors shadow-sm"
+              >
+                <Plus size={15} />
+                Post a Task
+              </Link>
+            )}
 
-            {/* Notifications bell */}
+            {/* Signed-out CTAs */}
+            {!isAuthed && (
+              <>
+                <Link
+                  to="/login"
+                  className="hidden sm:flex items-center gap-1.5 text-slate-700 hover:bg-slate-100
+                    text-sm font-semibold px-4 py-2 rounded-full transition-colors"
+                >
+                  <LogIn size={15} />
+                  Sign In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white
+                    text-sm font-semibold px-4 py-2 rounded-full transition-colors shadow-sm"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )}
+
+            {/* Notifications bell — signed-in only */}
+            {isAuthed && (
             <div className="relative" ref={notifRef}>
               <button
                 onClick={handleOpenNotif}
@@ -256,8 +282,10 @@ export const Navbar: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
 
-            {/* Profile dropdown */}
+            {/* Profile dropdown — signed-in only */}
+            {isAuthed && (
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => { setProfileOpen(v => !v); setNotifOpen(false); }}
@@ -293,7 +321,7 @@ export const Navbar: React.FC = () => {
                       onClick={async () => {
                         setProfileOpen(false);
                         await signOut();
-                        navigate('/');
+                        navigate(SUPABASE_CONFIGURED ? '/login' : '/');
                       }}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 w-full text-left"
                     >
@@ -303,6 +331,7 @@ export const Navbar: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* Mobile menu toggle */}
             <button
@@ -342,13 +371,32 @@ export const Navbar: React.FC = () => {
               {link.icon} {link.label}
             </Link>
           ))}
-          <Link
-            to="/create"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-2 bg-teal-600 text-white px-3 py-2.5 rounded-lg text-sm font-semibold"
-          >
-            <Plus size={16} /> Post a Task
-          </Link>
+          {isAuthed ? (
+            <Link
+              to="/create"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 bg-teal-600 text-white px-3 py-2.5 rounded-lg text-sm font-semibold"
+            >
+              <Plus size={16} /> Post a Task
+            </Link>
+          ) : (
+            <div className="flex flex-col gap-1 pt-2 border-t border-slate-100">
+              <Link
+                to="/login"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <LogIn size={16} /> Sign In
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 bg-teal-600 text-white px-3 py-2.5 rounded-lg text-sm font-semibold"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </nav>

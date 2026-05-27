@@ -13,6 +13,8 @@ import { Dashboard } from './pages/Dashboard';
 import { PulsePage } from './pages/PulsePage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
+import { TermsPage } from './pages/legal/TermsPage';
+import { PrivacyPage } from './pages/legal/PrivacyPage';
 import './index.css';
 
 export default function App() {
@@ -32,6 +34,8 @@ export default function App() {
                 <Route path="/pulse"       element={<PulsePage />} />
                 <Route path="/login"       element={<LoginPage />} />
                 <Route path="/signup"      element={<SignupPage />} />
+                <Route path="/legal/terms"   element={<TermsPage />} />
+                <Route path="/legal/privacy" element={<PrivacyPage />} />
 
                 {/* Protected routes — redirect to /login when Supabase is active */}
                 <Route path="/create" element={

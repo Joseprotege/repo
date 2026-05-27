@@ -4,7 +4,7 @@ import {
   MOCK_USERS, MOCK_LISTINGS, MOCK_OFFERS, MOCK_NOTIFICATIONS, MOCK_BROADCASTS,
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 import {
   adaptProfile, adaptListing, adaptOffer, adaptNotification, adaptBroadcast,
   listingToInsert, offerToInsert, broadcastToInsert,
@@ -13,14 +13,12 @@ import { fetchOpenListings, createListing as createListingService, subscribeToLi
 import { fetchBroadcasts, sendBroadcast as sendBroadcastService, reactToBroadcast as reactToBroadcastService, subscribeToBroadcasts } from '../services/broadcasts';
 import { fetchProfile, fetchReliability } from '../services/profiles';
 import { fetchNotifications, markAllRead as markAllReadService, subscribeToNotifications } from '../services/notifications';
-import { createOffer as createOfferService, acceptOffer as acceptOfferService } from '../services/offers';
-
-// ─── Is Supabase actually wired up? ───────────────────────────────────────────
-const SUPABASE_CONFIGURED = !!(
-  import.meta.env.VITE_SUPABASE_URL &&
-  import.meta.env.VITE_SUPABASE_ANON_KEY &&
-  !String(import.meta.env.VITE_SUPABASE_URL).includes('placeholder')
-);
+import {
+  createOffer as createOfferService,
+  acceptOffer as acceptOfferService,
+  completeOffer as completeOfferService,
+  submitRating as submitRatingService,
+} from '../services/offers';
 
 // ─── Context shape ────────────────────────────────────────────────────────────
 interface AppContextValue {
@@ -36,11 +34,14 @@ interface AppContextValue {
   addListing: (listing: Listing) => void;
   addOffer: (offer: Offer) => void;
   acceptOffer: (offerId: string, listingId: string) => void;
+  completeOffer: (offerId: string, listingId: string) => void;
+  rateOffer: (offerId: string, by: 'requester' | 'helper', rating: number, note?: string) => void;
   markNotificationRead: (notifId: string) => void;
   markAllRead: () => void;
   addBroadcast: (data: Omit<CommunityBroadcast, 'id' | 'reactions' | 'myReaction'>) => void;
   reactToBroadcast: (broadcastId: string, reaction: 'heart' | 'clap' | 'spark') => void;
   markBroadcastsSeen: () => void;
+  updateCurrentUser: (updates: Partial<User>) => void;
   // Derived
   unreadCount: number;
   unseenBroadcastCount: number;
@@ -139,7 +140,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ── Load per-user data when auth state changes ────────────────────────────
   useEffect(() => {
-    if (!SUPABASE_CONFIGURED || !authUser) return;
+    if (!SUPABASE_CONFIGURED) return;
+
+    // Signed out — clear personal data so the navbar/dashboard don't keep stale info
+    if (!authUser) {
+      setCurrentUser(MOCK_USERS.find(u => u.id === 'me')!);
+      setOffers([]);
+      setNotifications([]);
+      return;
+    }
 
     // Capture the ID synchronously — closures below are safe regardless of later auth changes
     const userId = authUser.id;
@@ -261,6 +270,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  const completeOffer = useCallback((offerId: string, listingId: string) => {
+    // Optimistic update
+    setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'completed' } : o));
+    setListings(prev => prev.map(l =>
+      l.id === listingId ? { ...l, status: 'completed', updatedAt: new Date().toISOString() } : l,
+    ));
+
+    if (SUPABASE_CONFIGURED) {
+      completeOfferService(offerId, listingId)
+        .catch(err => console.error('[AppContext] completeOffer DB error:', err));
+    }
+  }, []);
+
+  const rateOffer = useCallback((
+    offerId: string,
+    by: 'requester' | 'helper',
+    rating: number,
+    note?: string,
+  ) => {
+    // Optimistic update
+    setOffers(prev => prev.map(o => {
+      if (o.id !== offerId) return o;
+      return by === 'requester'
+        ? { ...o, ratingByRequester: rating, ratingNoteByRequester: note }
+        : { ...o, ratingByHelper: rating, ratingNoteByHelper: note };
+    }));
+
+    if (SUPABASE_CONFIGURED) {
+      submitRatingService(offerId, by, rating, note)
+        .catch(err => console.error('[AppContext] rateOffer DB error:', err));
+    }
+  }, []);
+
   const markNotificationRead = useCallback((notifId: string) => {
     setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read: true } : n));
   }, []);
@@ -326,6 +368,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, []);
 
+  /** Merge local updates into currentUser (and users[]) — persistence is the caller's job. */
+  const updateCurrentUser = useCallback((updates: Partial<User>) => {
+    setCurrentUser(prev => {
+      const merged = { ...prev, ...updates };
+      setUsers(us => us.map(u => u.id === merged.id ? merged : u));
+      return merged;
+    });
+  }, []);
+
   // ── Derived values ─────────────────────────────────────────────────────────
   const unreadCount = notifications.filter(n => !n.read).length;
   const unseenBroadcastCount = Math.max(0, broadcasts.length - seenBroadcastCount);
@@ -342,9 +393,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     <AppContext.Provider value={{
       currentUser, users, listings, offers, notifications, broadcasts,
       loading,
-      addListing, addOffer, acceptOffer,
+      addListing, addOffer, acceptOffer, completeOffer, rateOffer,
       markNotificationRead, markAllRead,
       addBroadcast, reactToBroadcast, markBroadcastsSeen,
+      updateCurrentUser,
       unreadCount, unseenBroadcastCount,
       getUserById, getListingById, getOffersByListing,
     }}>

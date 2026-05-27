@@ -71,7 +71,8 @@ export function adaptProfile(
     id,
     displayName: str(profile.display_name) || str(profile.username),
     username: str(profile.username),
-    avatarUrl: `https://api.dicebear.com/7.x/personas/svg?seed=${str(profile.avatar_seed) || id}`,
+    avatarUrl: str(profile.avatar_url)
+      || `https://api.dicebear.com/7.x/personas/svg?seed=${str(profile.avatar_seed) || id}`,
     bio: str(profile.bio),
     location: {
       city,
@@ -101,6 +102,7 @@ export function adaptListing(row: Record<string, unknown>): Listing {
   const neighborhood = str(row.neighborhood);
   const city = str(row.city);
   const imageUrl = str(row.image_url);
+  const imageUrls = arr<string>(row.image_urls);
   return {
     id: str(row.id),
     requesterId: str(row.user_id),
@@ -119,7 +121,7 @@ export function adaptListing(row: Record<string, unknown>): Listing {
     },
     preferredRadiusMiles: num(row.preferred_radius_miles, 15),
     tags: arr<string>(row.tags),
-    imageUrls: imageUrl ? [imageUrl] : [],
+    imageUrls: imageUrls.length > 0 ? imageUrls : (imageUrl ? [imageUrl] : []),
     // DB uses in_progress (underscore), App uses in-progress (hyphen)
     status: (status === 'in_progress' ? 'in-progress' : status) as ListingStatus,
     offerIds: [],
@@ -149,6 +151,8 @@ export function listingToInsert(listing: Listing): Record<string, unknown> {
     lng: listing.location.lng,
     preferred_radius_miles: listing.preferredRadiusMiles,
     tags: listing.tags,
+    image_url: listing.imageUrls[0] ?? '',
+    image_urls: listing.imageUrls,
     can_be_remote: listing.canBeRemote,
     estimated_hours: listing.estimatedHours,
     status: listing.status === 'in-progress' ? 'in_progress' : listing.status,

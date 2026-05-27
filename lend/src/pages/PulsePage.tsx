@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, MapPin, ArrowRight, Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BroadcastCard } from '../components/common/CommunityPulse';
 import { NeighborhoodSelector, NeighborhoodActivity } from '../components/common/NeighborhoodActivity';
-import { NEIGHBORHOOD_STATS } from '../data/mockData';
 
 export const PulsePage: React.FC = () => {
-  const { broadcasts } = useApp();
+  const { broadcasts, listings, offers } = useApp();
   const [selectedNeighborhood, setSelectedNeighborhood] = useState('');
   const [showAll, setShowAll] = useState(false);
 
@@ -18,9 +17,21 @@ export const PulsePage: React.FC = () => {
     : broadcasts;
 
   const visible = showAll ? filtered : filtered.slice(0, 8);
-  const cityTotal = NEIGHBORHOOD_STATS.reduce(
-    (s, n) => ({ helpers: s.helpers + n.activeHelpers, tasks: s.tasks + n.tasksCompletedMonth }),
-    { helpers: 0, tasks: 0 },
+
+  // Live city-wide aggregates from real listings + offers
+  const cityTotal = useMemo(() => {
+    const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const helpers = new Set(offers.map(o => o.offererId)).size;
+    const tasks = listings.filter(l =>
+      l.status === 'completed' && new Date(l.updatedAt).getTime() > monthAgo,
+    ).length;
+    return { helpers, tasks };
+  }, [offers, listings]);
+
+  // Use the first neighborhood we know about as a default sidebar focus
+  const defaultNeighborhood = useMemo(
+    () => listings[0]?.location.neighborhood ?? '',
+    [listings],
   );
 
   return (
@@ -138,9 +149,9 @@ export const PulsePage: React.FC = () => {
             </div>
 
             {/* Neighborhood stats */}
-            {(selectedNeighborhood || true) && (
+            {(selectedNeighborhood || defaultNeighborhood) && (
               <NeighborhoodActivity
-                neighborhood={selectedNeighborhood || 'Hyde Park'}
+                neighborhood={selectedNeighborhood || defaultNeighborhood}
               />
             )}
 

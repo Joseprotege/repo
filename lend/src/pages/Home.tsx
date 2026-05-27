@@ -58,6 +58,19 @@ export const Home: React.FC = () => {
     .sort((a, b) => b.reliability.overall - a.reliability.overall)
     .slice(0, 4);
 
+  // Top 3 neighborhoods by listing count (derived from real data, not hardcoded)
+  const topNeighborhoods = (() => {
+    const counts = new Map<string, number>();
+    for (const l of listings) {
+      const n = l.location.neighborhood;
+      if (n) counts.set(n, (counts.get(n) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([n]) => n);
+  })();
+
   return (
     <div className="page-enter">
       {/* ── HERO ────────────────────────────────────────────────────── */}
@@ -202,9 +215,25 @@ export const Home: React.FC = () => {
           </Link>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {['Hyde Park', 'Mueller', 'South Congress'].map(n => (
-            <NeighborhoodActivity key={n} neighborhood={n} />
-          ))}
+          {topNeighborhoods.length > 0 ? (
+            topNeighborhoods.map(n => (
+              <NeighborhoodActivity key={n} neighborhood={n} />
+            ))
+          ) : (
+            <div className="sm:col-span-2 lg:col-span-3 bg-white rounded-2xl border border-dashed border-slate-300 p-8 text-center">
+              <div className="text-4xl mb-3">🌱</div>
+              <h3 className="text-base font-bold text-slate-800 mb-1">No neighborhood activity yet</h3>
+              <p className="text-sm text-slate-500 mb-4 max-w-md mx-auto">
+                Foster's just getting started in your area. Post the first task and start the community.
+              </p>
+              <Link
+                to="/create"
+                className="inline-block bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm px-5 py-2.5 rounded-full"
+              >
+                Post a task →
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 

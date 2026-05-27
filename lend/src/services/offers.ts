@@ -84,3 +84,29 @@ export async function completeOffer(offerId: string, listingId: string): Promise
   if (e1 || e2) { console.error('[offers] completeOffer:', e1?.message, e2?.message); return false; }
   return true;
 }
+
+/**
+ * Submit a rating + optional note on a completed offer.
+ * `by` tells us which side is rating — the requester rates the helper
+ * (writes rating_by_requester) and the helper rates the requester
+ * (writes rating_by_helper). Triggers on the offers table recompute the
+ * helper's reliability score automatically.
+ */
+export async function submitRating(
+  offerId: string,
+  by: 'requester' | 'helper',
+  rating: number,
+  note?: string,
+): Promise<boolean> {
+  const updates = by === 'requester'
+    ? { rating_by_requester: rating, rating_note_by_requester: note ?? null }
+    : { rating_by_helper: rating, rating_note_by_helper: note ?? null };
+
+  const { error } = await supabase
+    .from('offers')
+    .update(updates as never)
+    .eq('id', offerId);
+
+  if (error) { console.error('[offers] submitRating:', error.message); return false; }
+  return true;
+}

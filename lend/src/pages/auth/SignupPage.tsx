@@ -12,11 +12,13 @@ export const SignupPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (!acceptedTerms) { setError('Please accept the Terms of Service to continue.'); return; }
     setLoading(true);
     const { error } = await signUp(email, password, displayName);
     setLoading(false);
@@ -120,11 +122,31 @@ export const SignupPage: React.FC = () => {
               <p className="text-[11px] text-slate-400 mt-1">Minimum 8 characters</p>
             </div>
 
+            <label className="flex items-start gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={e => setAcceptedTerms(e.target.checked)}
+                className="mt-0.5 accent-teal-600"
+              />
+              <span>
+                I agree to Foster's{' '}
+                <Link to="/legal/terms" className="text-teal-600 hover:text-teal-700 font-semibold" target="_blank">
+                  Terms of Service
+                </Link>{' '}
+                and{' '}
+                <Link to="/legal/privacy" className="text-teal-600 hover:text-teal-700 font-semibold" target="_blank">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !acceptedTerms}
               className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700
-                disabled:opacity-60 text-white font-bold py-3 rounded-xl transition-colors"
+                disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors"
             >
               {loading ? (
                 <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
