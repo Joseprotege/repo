@@ -902,13 +902,13 @@ export const ChatPage: React.FC = () => {
         </div>
 
         {/* ── Payment panel ───────────────────────────────────────────── */}
-        {(offer.requestedAmount > 0 || isRequester) && (
+        {(listing.isPaid || offer.requestedAmount > 0 || isRequester) && (
           <PaymentPanel
             offerId={offerId!}
             listingId={listing.id}
             requesterId={listing.requesterId}
             helperId={offer.offererId}
-            requestedAmountCents={offer.requestedAmount}
+            requestedAmountCents={listing.budgetCents || offer.requestedAmount}
             isRequester={isRequester}
             taskCompleted={taskDone}
           />
