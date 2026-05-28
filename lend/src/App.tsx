@@ -15,6 +15,9 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
 import { TermsPage } from './pages/legal/TermsPage';
 import { PrivacyPage } from './pages/legal/PrivacyPage';
+import { ChatPage } from './pages/ChatPage';
+import { FeePage } from './pages/FeePage';
+import { GlobalVoiceListener } from './components/app/GlobalVoiceListener';
 import './index.css';
 
 export default function App() {
@@ -22,6 +25,9 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppProvider>
+          {/* Global voice-call notifier — shows incoming call banner + fires
+              browser Notification when a voice_request arrives for this user */}
+          <GlobalVoiceListener />
           <div className="min-h-screen flex flex-col bg-slate-100">
             <Navbar />
             <main className="flex-1">
@@ -36,6 +42,7 @@ export default function App() {
                 <Route path="/signup"      element={<SignupPage />} />
                 <Route path="/legal/terms"   element={<TermsPage />} />
                 <Route path="/legal/privacy" element={<PrivacyPage />} />
+                <Route path="/fees"          element={<FeePage />} />
 
                 {/* Protected routes — redirect to /login when Supabase is active */}
                 <Route path="/create" element={
@@ -43,6 +50,9 @@ export default function App() {
                 } />
                 <Route path="/dashboard" element={
                   <ProtectedRoute><Dashboard /></ProtectedRoute>
+                } />
+                <Route path="/chat/:offerId" element={
+                  <ProtectedRoute><ChatPage /></ProtectedRoute>
                 } />
 
                 {/* 404 */}

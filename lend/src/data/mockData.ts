@@ -1,4 +1,4 @@
-import type { User, Listing, Offer, Connection, Notification, CommunityBroadcast, NeighborhoodStats } from '../types';
+import type { User, Listing, Offer, Connection, Notification, CommunityBroadcast, NeighborhoodStats, TaskStep } from '../types';
 
 // ─── USERS ──────────────────────────────────────────────────────────────────
 
@@ -190,6 +190,12 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: false,
     estimatedHours: 4,
     views: 47,
+    taskSteps: [
+      { id: 'ts_l1_1', instruction: 'Text me when you arrive so I can buzz you in', order: 0 },
+      { id: 'ts_l1_2', instruction: 'Start with the bedroom — the bed frame disassembles first', order: 1 },
+      { id: 'ts_l1_3', instruction: 'Wrap the couch cushions in the moving blankets on the kitchen floor', order: 2 },
+      { id: 'ts_l1_4', instruction: 'Check everything is loaded before we drive to the new place', order: 3 },
+    ] satisfies TaskStep[],
   },
   {
     id: 'l2',
@@ -210,6 +216,11 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: true,
     estimatedHours: 3,
     views: 23,
+    taskSteps: [
+      { id: 'ts_l2_1', instruction: 'Share the Google Doc link so I can leave comments directly', order: 0 },
+      { id: 'ts_l2_2', instruction: 'Focus on the personal statement first — that one needs the most work', order: 1 },
+      { id: 'ts_l2_3', instruction: 'Check the supplemental essays after and flag anything that feels repetitive', order: 2 },
+    ] satisfies TaskStep[],
   },
   {
     id: 'l3',
@@ -229,6 +240,12 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: false,
     estimatedHours: 2,
     views: 61,
+    taskSteps: [
+      { id: 'ts_l3_1', instruction: 'Locate the shutoff valve under the sink and turn off the water first', hint: 'It\'s the small valve on the supply line — turn clockwise to close', order: 0 },
+      { id: 'ts_l3_2', instruction: 'Take a photo of the faucet assembly before disassembly so we can reference it', order: 1 },
+      { id: 'ts_l3_3', instruction: 'The new cartridge and washers are in the box on the counter — use those', order: 2 },
+      { id: 'ts_l3_4', instruction: 'Turn the water back on slowly and test for leaks before finishing', order: 3 },
+    ] satisfies TaskStep[],
   },
   {
     id: 'l4',
@@ -249,6 +266,7 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: false,
     estimatedHours: 1,
     views: 89,
+    taskSteps: [] satisfies TaskStep[],
   },
   {
     id: 'l5',
@@ -268,6 +286,7 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: true,
     estimatedHours: 5,
     views: 34,
+    taskSteps: [] satisfies TaskStep[],
   },
   {
     id: 'l6',
@@ -288,6 +307,12 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: false,
     estimatedHours: 21,
     views: 112,
+    taskSteps: [
+      { id: 'ts_l6_1', instruction: 'Knock on the door (don\'t ring — Biscuit goes crazy at the bell)', order: 0 },
+      { id: 'ts_l6_2', instruction: 'His leash is on the hook by the door. He\'s excited but well-behaved once outside', order: 1 },
+      { id: 'ts_l6_3', instruction: 'Take the route through the park — he loves the fountain', order: 2 },
+      { id: 'ts_l6_4', instruction: 'Text me a quick "we\'re back!" when you return him', order: 3 },
+    ] satisfies TaskStep[],
   },
 ];
 
@@ -307,6 +332,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-23T18:00:00Z',
     updatedAt: '2025-05-23T18:00:00Z',
     distanceMiles: 2.1,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o2',
@@ -321,6 +349,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-24T07:30:00Z',
     updatedAt: '2025-05-24T07:30:00Z',
     distanceMiles: 15.3,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o3',
@@ -335,6 +366,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-24T11:45:00Z',
     updatedAt: '2025-05-24T11:45:00Z',
     distanceMiles: 16.7,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o4',
@@ -349,6 +383,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-23T09:00:00Z',
     updatedAt: '2025-05-23T09:00:00Z',
     distanceMiles: 1.4,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o5',
@@ -363,6 +400,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-23T11:15:00Z',
     updatedAt: '2025-05-23T11:15:00Z',
     distanceMiles: 0.8,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o6',
@@ -377,6 +417,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-24T21:00:00Z',
     updatedAt: '2025-05-25T08:00:00Z',
     distanceMiles: 18.5,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o7',
@@ -391,6 +434,9 @@ export const MOCK_OFFERS: Offer[] = [
     createdAt: '2025-05-22T14:00:00Z',
     updatedAt: '2025-05-22T14:00:00Z',
     distanceMiles: 3.2,
+    currentStepIndex: 0,
+    stepsCompleted: false,
+    requestedAmount: 0,
   },
   {
     id: 'o8',
@@ -410,6 +456,9 @@ export const MOCK_OFFERS: Offer[] = [
     ratingByHelper: 5,
     ratingNoteByHelper: "Alex is so appreciative and Biscuit is a sweetheart.",
     returnFavorPending: true,
+    currentStepIndex: 4,
+    stepsCompleted: true,
+    requestedAmount: 0,
   },
 ];
 

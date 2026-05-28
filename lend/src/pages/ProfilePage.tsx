@@ -7,6 +7,7 @@ import { ReliabilityMeter } from '../components/common/ReliabilityMeter';
 import { ListingCard } from '../components/listing/ListingCard';
 import { EditProfileModal } from '../components/common/EditProfileModal';
 import { ReportModal } from '../components/common/ReportModal';
+import { StripeConnectCard } from '../components/user/StripeConnectCard';
 import { Flag } from 'lucide-react';
 
 type Tab = 'listings' | 'reliability' | 'connections';
@@ -161,6 +162,8 @@ export const ProfilePage: React.FC = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {tab === 'listings' && (
           <div className="space-y-6">
+            {isMe && <StripeConnectCard userId={user.id} />}
+
             {isMe && (
               <div className="flex justify-end">
                 <Link
