@@ -19,9 +19,9 @@ export const ProfilePage: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(false);
 
-  const userId = id === 'me' ? 'me' : id!;
-  const user = getUserById(userId);
-  const isMe = userId === currentUser.id || userId === 'me';
+  const userId = id === 'me' ? currentUser.id : id!;
+  const user = userId === currentUser.id ? currentUser : getUserById(userId);
+  const isMe = userId === currentUser.id;
 
   if (!user) {
     return (
