@@ -4,7 +4,7 @@ import {
   MOCK_USERS, MOCK_LISTINGS, MOCK_OFFERS, MOCK_NOTIFICATIONS, MOCK_BROADCASTS,
 } from '../data/mockData';
 import { useAuth } from './AuthContext';
-import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
+import { SUPABASE_CONFIGURED } from '../lib/supabase';
 import {
   adaptProfile, adaptListing, adaptOffer, adaptNotification, adaptBroadcast,
   listingToInsert, offerToInsert, broadcastToInsert,
@@ -18,6 +18,8 @@ import {
   acceptOffer as acceptOfferService,
   completeOffer as completeOfferService,
   submitRating as submitRatingService,
+  fetchRelevantOffers,
+  subscribeToOffers,
 } from '../services/offers';
 
 // ─── Context shape ────────────────────────────────────────────────────────────
@@ -173,21 +175,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
 
         // Load offers: own offers (as helper) + offers received on user's listings
-        const { data: ownListingRows } = await supabase
-          .from('listings')
-          .select('id')
-          .eq('user_id', userId);
-        const ownListingIds = (ownListingRows ?? []).map((l: { id: string }) => l.id);
-
-        const orFilter = ownListingIds.length > 0
-          ? `user_id.eq.${userId},listing_id.in.(${ownListingIds.join(',')})`
-          : `user_id.eq.${userId}`;
-
-        const { data: offerRows } = await supabase
-          .from('offers')
-          .select('*')
-          .or(orFilter);
-        if (mounted && offerRows) {
+        const offerRows = await fetchRelevantOffers(userId);
+        if (mounted) {
           setOffers(offerRows.map(r => adaptOffer(r as unknown as Record<string, unknown>)));
         }
 
@@ -208,9 +197,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNotifications(rows.map(r => adaptNotification(r as unknown as Record<string, unknown>)));
     });
 
+    // Real-time offer stream — fires when an offer is made on the user's
+    // listings (lister) or when one of their own offers changes status (helper)
+    const offerSub = subscribeToOffers(userId, rows => {
+      if (mounted) setOffers(rows.map(r => adaptOffer(r as unknown as Record<string, unknown>)));
+    });
+
     return () => {
       mounted = false;
       notifSub.unsubscribe();
+      offerSub.unsubscribe();
     };
   }, [authUser]);
 
