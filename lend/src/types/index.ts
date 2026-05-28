@@ -242,6 +242,10 @@ export interface Listing {
   views: number;
   /** Optional step-by-step guide the lister pre-authors */
   taskSteps: TaskStep[];
+  /** True when the lister is offering payment for this task */
+  isPaid: boolean;
+  /** Fixed budget in cents. 0 means volunteer. */
+  budgetCents: number;
 }
 
 export interface Connection {

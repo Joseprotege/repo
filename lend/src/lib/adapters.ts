@@ -134,6 +134,8 @@ export function adaptListing(row: Record<string, unknown>): Listing {
     estimatedHours: num(row.estimated_hours, 2),
     views: num(row.views),
     taskSteps: arr<TaskStep>(row.task_steps),
+    isPaid: bool(row.is_paid),
+    budgetCents: num(row.budget_cents),
   };
 }
 
@@ -159,6 +161,8 @@ export function listingToInsert(listing: Listing): Record<string, unknown> {
     estimated_hours: listing.estimatedHours,
     status: listing.status === 'in-progress' ? 'in_progress' : listing.status,
     task_steps: listing.taskSteps,
+    is_paid: listing.isPaid,
+    budget_cents: listing.budgetCents,
   };
 }
 

@@ -67,10 +67,17 @@ export const ListingCard: React.FC<Props> = ({ listing, compact = false }) => {
           </div>
         )}
 
-        {/* Title */}
-        <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 mb-2 group-hover:text-teal-700 transition-colors">
-          {listing.title}
-        </h3>
+        {/* Title + paid badge */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-teal-700 transition-colors flex-1">
+            {listing.title}
+          </h3>
+          {listing.isPaid && listing.budgetCents > 0 && (
+            <span className="flex-shrink-0 text-[11px] font-bold px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full">
+              💰 ${Math.round(listing.budgetCents / 100)}
+            </span>
+          )}
+        </div>
 
         {/* Description preview */}
         {!compact && (

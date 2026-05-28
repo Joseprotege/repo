@@ -196,6 +196,8 @@ export const MOCK_LISTINGS: Listing[] = [
       { id: 'ts_l1_3', instruction: 'Wrap the couch cushions in the moving blankets on the kitchen floor', order: 2 },
       { id: 'ts_l1_4', instruction: 'Check everything is loaded before we drive to the new place', order: 3 },
     ] satisfies TaskStep[],
+    isPaid: false,
+    budgetCents: 0,
   },
   {
     id: 'l2',
@@ -221,6 +223,8 @@ export const MOCK_LISTINGS: Listing[] = [
       { id: 'ts_l2_2', instruction: 'Focus on the personal statement first — that one needs the most work', order: 1 },
       { id: 'ts_l2_3', instruction: 'Check the supplemental essays after and flag anything that feels repetitive', order: 2 },
     ] satisfies TaskStep[],
+    isPaid: false,
+    budgetCents: 0,
   },
   {
     id: 'l3',
@@ -246,6 +250,8 @@ export const MOCK_LISTINGS: Listing[] = [
       { id: 'ts_l3_3', instruction: 'The new cartridge and washers are in the box on the counter — use those', order: 2 },
       { id: 'ts_l3_4', instruction: 'Turn the water back on slowly and test for leaks before finishing', order: 3 },
     ] satisfies TaskStep[],
+    isPaid: false,
+    budgetCents: 0,
   },
   {
     id: 'l4',
@@ -266,7 +272,7 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: false,
     estimatedHours: 1,
     views: 89,
-    taskSteps: [] satisfies TaskStep[],
+    taskSteps: [] satisfies TaskStep[], isPaid: false, budgetCents: 0,
   },
   {
     id: 'l5',
@@ -286,7 +292,7 @@ export const MOCK_LISTINGS: Listing[] = [
     canBeRemote: true,
     estimatedHours: 5,
     views: 34,
-    taskSteps: [] satisfies TaskStep[],
+    taskSteps: [] satisfies TaskStep[], isPaid: false, budgetCents: 0,
   },
   {
     id: 'l6',
@@ -313,6 +319,8 @@ export const MOCK_LISTINGS: Listing[] = [
       { id: 'ts_l6_3', instruction: 'Take the route through the park — he loves the fountain', order: 2 },
       { id: 'ts_l6_4', instruction: 'Text me a quick "we\'re back!" when you return him', order: 3 },
     ] satisfies TaskStep[],
+    isPaid: false,
+    budgetCents: 0,
   },
 ];
 

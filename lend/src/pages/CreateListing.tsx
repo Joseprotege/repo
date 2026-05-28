@@ -36,6 +36,8 @@ export const CreateListing: React.FC = () => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [listingId] = useState(() => crypto.randomUUID());
   const [taskSteps, setTaskSteps] = useState<TaskStep[]>([]);
+  const [isPaid, setIsPaid] = useState(false);
+  const [budgetDollars, setBudgetDollars] = useState(20);
   const [step, setStep] = useState(1);
 
   const TOTAL_STEPS = 4;
@@ -77,6 +79,8 @@ export const CreateListing: React.FC = () => {
       estimatedHours: hours,
       views: 0,
       taskSteps: taskSteps.map((s, i) => ({ ...s, order: i })),
+      isPaid,
+      budgetCents: isPaid ? Math.round(budgetDollars * 100) : 0,
     };
     addListing(newListing);
     navigate(`/listing/${newListing.id}`);
@@ -288,6 +292,51 @@ export const CreateListing: React.FC = () => {
                   <p className="text-xs text-slate-400">Opens this up to helpers anywhere, not just nearby</p>
                 </div>
               </div>
+
+              {/* Paid vs volunteer */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Compensation</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsPaid(false)}
+                    className={`p-3 rounded-xl border text-sm font-semibold transition-all text-left
+                      ${!isPaid ? 'border-teal-500 bg-teal-50 text-teal-700 ring-1 ring-teal-500' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                  >
+                    🤝 Volunteer
+                    <p className="text-xs font-normal mt-0.5 opacity-70">No payment — community help</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPaid(true)}
+                    className={`p-3 rounded-xl border text-sm font-semibold transition-all text-left
+                      ${isPaid ? 'border-violet-500 bg-violet-50 text-violet-700 ring-1 ring-violet-500' : 'border-slate-200 text-slate-600 hover:border-slate-300'}`}
+                  >
+                    💰 Paid task
+                    <p className="text-xs font-normal mt-0.5 opacity-70">You pay the helper on completion</p>
+                  </button>
+                </div>
+                {isPaid && (
+                  <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
+                    <label className="flex justify-between text-sm font-semibold text-violet-800 mb-2">
+                      <span>Your budget</span>
+                      <span className="text-violet-600">${budgetDollars}</span>
+                    </label>
+                    <input
+                      type="range" min={5} max={500} step={5}
+                      value={budgetDollars}
+                      onChange={e => setBudgetDollars(+e.target.value)}
+                      className="w-full accent-violet-600"
+                    />
+                    <div className="flex justify-between text-xs text-violet-500 mt-1">
+                      <span>$5</span><span>$500</span>
+                    </div>
+                    <p className="text-xs text-violet-600 mt-2">
+                      A small platform fee applies. Payment is held in escrow until you confirm the task is complete.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -370,6 +419,11 @@ export const CreateListing: React.FC = () => {
                   )}
                   {canBeRemote && (
                     <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">🌐 Remote OK</span>
+                  )}
+                  {isPaid ? (
+                    <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full font-semibold">💰 Paid · ${budgetDollars}</span>
+                  ) : (
+                    <span className="text-xs px-2 py-0.5 bg-teal-100 text-teal-700 rounded-full">🤝 Volunteer</span>
                   )}
                 </div>
               </div>
