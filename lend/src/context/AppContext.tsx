@@ -172,11 +172,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           return [adapted, ...without];
         });
 
-        // Load this user's offers (as helper + as requester)
+        // Load offers: own offers (as helper) + offers received on user's listings
+        const { data: ownListingRows } = await supabase
+          .from('listings')
+          .select('id')
+          .eq('user_id', userId);
+        const ownListingIds = (ownListingRows ?? []).map((l: { id: string }) => l.id);
+
+        const orFilter = ownListingIds.length > 0
+          ? `user_id.eq.${userId},listing_id.in.(${ownListingIds.join(',')})`
+          : `user_id.eq.${userId}`;
+
         const { data: offerRows } = await supabase
           .from('offers')
           .select('*')
-          .eq('user_id', userId);
+          .or(orFilter);
         if (mounted && offerRows) {
           setOffers(offerRows.map(r => adaptOffer(r as unknown as Record<string, unknown>)));
         }
