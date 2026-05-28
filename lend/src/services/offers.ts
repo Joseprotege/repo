@@ -24,7 +24,7 @@ export async function fetchOffersForListing(listingId: string): Promise<OfferRow
   return (data ?? []) as OfferRow[];
 }
 
-/** Fetch all offers made by a user */
+/** Fetch all offers made by a user (as the helper) */
 export async function fetchUserOffers(userId: string): Promise<OfferRow[]> {
   const { data, error } = await supabase
     .from('offers')
@@ -34,6 +34,60 @@ export async function fetchUserOffers(userId: string): Promise<OfferRow[]> {
 
   if (error) { console.error('[offers] fetchUserOffers:', error.message); return []; }
   return (data ?? []) as OfferRow[];
+}
+
+/**
+ * Fetch all offers *received* on listings the user owns (the lister's
+ * incoming offers). Done as two simple queries — first the user's listing
+ * ids, then offers on those listings — which is more robust than a combined
+ * PostgREST `.or(...in.(...))` filter and surfaces errors clearly.
+ */
+export async function fetchReceivedOffers(userId: string): Promise<OfferRow[]> {
+  const { data: listingRows, error: le } = await supabase
+    .from('listings')
+    .select('id')
+    .eq('user_id', userId);
+
+  if (le) { console.error('[offers] fetchReceivedOffers (listings):', le.message); return []; }
+  const ids = (listingRows ?? []).map((l: { id: string }) => l.id);
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('offers')
+    .select('*')
+    .in('listing_id', ids)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('[offers] fetchReceivedOffers (offers):', error.message); return []; }
+  return (data ?? []) as OfferRow[];
+}
+
+/**
+ * Load every offer relevant to a user — ones they made (helper) and ones
+ * they received (lister) — merged and de-duplicated by id.
+ */
+export async function fetchRelevantOffers(userId: string): Promise<OfferRow[]> {
+  const [own, received] = await Promise.all([
+    fetchUserOffers(userId),
+    fetchReceivedOffers(userId),
+  ]);
+  return Array.from(new Map([...own, ...received].map(o => [o.id, o])).values());
+}
+
+/**
+ * Live-subscribe to offer changes relevant to the user. Realtime can't filter
+ * by "listing I own", so we listen to any offer change and re-fetch the
+ * relevant set (RLS guarantees we only get back rows we're allowed to see).
+ */
+export function subscribeToOffers(
+  userId: string,
+  callback: (offers: OfferRow[]) => void,
+) {
+  const refetch = async () => callback(await fetchRelevantOffers(userId));
+  return supabase
+    .channel(`offers-${userId}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'offers' }, refetch)
+    .subscribe();
 }
 
 /** Submit a new offer */
