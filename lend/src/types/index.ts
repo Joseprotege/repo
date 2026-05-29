@@ -97,6 +97,7 @@ export interface TaskStep {
 
 export type TaskMessageType =
   | 'step_response'   // helper's reply to a queued step
+  | 'step_approved'   // lister approves the response, unlocking the next step
   | 'dm'              // free-form direct message from either party
   | 'system'          // automated event (offer accepted, task complete, etc.)
   | 'voice_request'   // helper requests voice escalation
