@@ -9,7 +9,7 @@ import {
   adaptProfile, adaptListing, adaptOffer, adaptNotification, adaptBroadcast,
   listingToInsert, offerToInsert, broadcastToInsert,
 } from '../lib/adapters';
-import { fetchOpenListings, createListing as createListingService, subscribeToListings } from '../services/listings';
+import { fetchOpenListings, fetchUserListings, fetchListing, createListing as createListingService, subscribeToListings } from '../services/listings';
 import { fetchBroadcasts, sendBroadcast as sendBroadcastService, reactToBroadcast as reactToBroadcastService, subscribeToBroadcasts } from '../services/broadcasts';
 import { fetchProfile, fetchReliability } from '../services/profiles';
 import { fetchNotifications, markAllRead as markAllReadService, subscribeToNotifications } from '../services/notifications';
@@ -125,9 +125,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     loadPublicData();
 
-    // Real-time updates for listings and broadcasts
-    const listingsSub = subscribeToListings(rows => {
-      setListings(rows.map(r => adaptListing(r as unknown as Record<string, unknown>)));
+    // Real-time updates for listings and broadcasts.
+    // Merge the single changed row so an open→in_progress transition updates
+    // the listing in place rather than dropping it from state.
+    const listingsSub = subscribeToListings(({ row, event }) => {
+      const adapted = adaptListing(row as unknown as Record<string, unknown>);
+      setListings(prev => {
+        if (event === 'DELETE') return prev.filter(l => l.id !== adapted.id);
+        if (prev.some(l => l.id === adapted.id)) {
+          return prev.map(l => l.id === adapted.id ? adapted : l);
+        }
+        return [adapted, ...prev];
+      });
     });
     const broadcastsSub = subscribeToBroadcasts(rows => {
       setBroadcasts(rows.map(r => adaptBroadcast(r as unknown as Record<string, unknown>)));
@@ -178,6 +187,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const offerRows = await fetchRelevantOffers(userId);
         if (mounted) {
           setOffers(offerRows.map(r => adaptOffer(r as unknown as Record<string, unknown>)));
+        }
+
+        // Load the user's own listings (any status) + listings they've offered
+        // on, and merge them into state. The public feed only carries OPEN
+        // listings, so without this an accepted/in-progress task vanishes from
+        // the dashboard and breaks its chat/listing pages on refresh.
+        const ownListings = await fetchUserListings(userId);
+        const offeredIds = [...new Set(offerRows.map(o => o.listing_id))]
+          .filter(id => !ownListings.some(l => l.id === id));
+        const offeredListings = (await Promise.all(offeredIds.map(id => fetchListing(id))))
+          .filter((l): l is NonNullable<typeof l> => l !== null);
+        const relevantListings = [...ownListings, ...offeredListings];
+        if (mounted && relevantListings.length > 0) {
+          const adaptedRelevant = relevantListings.map(
+            l => adaptListing(l as unknown as Record<string, unknown>),
+          );
+          const relevantIds = new Set(adaptedRelevant.map(l => l.id));
+          setListings(prev => [...adaptedRelevant, ...prev.filter(l => !relevantIds.has(l.id))]);
         }
 
         // Load notifications

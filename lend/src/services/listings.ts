@@ -87,13 +87,20 @@ export async function deleteListing(id: string): Promise<boolean> {
   return true;
 }
 
-/** Subscribe to real-time listing changes */
-export function subscribeToListings(callback: (listings: ListingRow[]) => void) {
+/** Subscribe to real-time listing changes.
+ *  Emits the single changed row + event type so the caller can merge it into
+ *  state. (The old behaviour refetched open-listings-only and replaced the
+ *  whole array, which wiped any in-progress/completed listing the user was
+ *  actively viewing.) */
+export function subscribeToListings(
+  onChange: (change: { row: ListingRow; event: 'INSERT' | 'UPDATE' | 'DELETE' }) => void,
+) {
   return supabase
     .channel('listings-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'listings' }, async () => {
-      const listings = await fetchOpenListings();
-      callback(listings);
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'listings' }, (payload) => {
+      const event = payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE';
+      const row = (event === 'DELETE' ? payload.old : payload.new) as ListingRow;
+      if (row && row.id) onChange({ row, event });
     })
     .subscribe();
 }
