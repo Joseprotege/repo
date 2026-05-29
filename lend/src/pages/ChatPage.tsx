@@ -55,14 +55,18 @@ interface StepQueueProps {
   stepsCompleted: boolean;
   messages: TaskMessage[];
   isHelper: boolean;
+  isRequester: boolean;
   onRespond: (response: string, stepIndex: number) => void;
+  onApproveStep: (stepIndex: number) => void;
 }
 
 const StepQueuePanel: React.FC<StepQueueProps> = ({
-  steps, currentIndex, stepsCompleted, messages, isHelper, onRespond,
+  steps, currentIndex, stepsCompleted, messages, isHelper, isRequester,
+  onRespond, onApproveStep,
 }) => {
   const [response, setResponse] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   if (steps.length === 0) {
     return (
@@ -89,6 +93,13 @@ const StepQueuePanel: React.FC<StepQueueProps> = ({
     setSubmitting(false);
   };
 
+  const handleApprove = async (idx: number) => {
+    if (approving) return;
+    setApproving(true);
+    await onApproveStep(idx);
+    setApproving(false);
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -101,16 +112,20 @@ const StepQueuePanel: React.FC<StepQueueProps> = ({
 
         {steps.map((step, idx) => {
           const stepMsg = getStepResponse(idx);
+          // A step is "done" (green) only after the lister approved it (index advanced past it)
           const isDone = idx < currentIndex || stepsCompleted;
           const isCurrent = idx === currentIndex && !stepsCompleted;
           const isLocked = idx > currentIndex && !stepsCompleted;
+          // Lister sees "Approve" when helper has responded but step hasn't been approved yet
+          const awaitingApproval = isCurrent && !!stepMsg && isRequester;
 
           return (
             <div
               key={step.id}
               className={`rounded-xl border p-4 transition-all
                 ${isDone ? 'bg-emerald-50 border-emerald-200' : ''}
-                ${isCurrent ? 'bg-teal-50 border-teal-300 ring-1 ring-teal-300' : ''}
+                ${isCurrent && !awaitingApproval ? 'bg-teal-50 border-teal-300 ring-1 ring-teal-300' : ''}
+                ${awaitingApproval ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-300' : ''}
                 ${isLocked ? 'bg-slate-50 border-slate-200 opacity-60' : ''}
               `}
             >
@@ -118,16 +133,17 @@ const StepQueuePanel: React.FC<StepQueueProps> = ({
                 {/* Step number / status icon */}
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5
                   ${isDone ? 'bg-emerald-500 text-white' : ''}
-                  ${isCurrent ? 'bg-teal-600 text-white' : ''}
+                  ${awaitingApproval ? 'bg-amber-500 text-white' : ''}
+                  ${isCurrent && !awaitingApproval ? 'bg-teal-600 text-white' : ''}
                   ${isLocked ? 'bg-slate-300 text-white' : ''}
                 `}>
-                  {isDone ? '✓' : isLocked ? <Lock size={12} /> : idx + 1}
+                  {isDone ? '✓' : awaitingApproval ? '!' : isLocked ? <Lock size={12} /> : idx + 1}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   {/* Instruction */}
                   <p className={`text-sm font-semibold leading-relaxed
-                    ${isDone ? 'text-emerald-800' : isCurrent ? 'text-teal-900' : 'text-slate-600'}
+                    ${isDone ? 'text-emerald-800' : awaitingApproval ? 'text-amber-900' : isCurrent ? 'text-teal-900' : 'text-slate-600'}
                   `}>
                     {step.instruction}
                   </p>
@@ -142,14 +158,38 @@ const StepQueuePanel: React.FC<StepQueueProps> = ({
                   {/* Helper's response */}
                   {stepMsg && (
                     <div className="mt-2 bg-white border border-emerald-200 rounded-lg px-3 py-2">
-                      <p className="text-xs text-emerald-600 font-semibold mb-0.5">Your response:</p>
+                      <p className="text-xs text-emerald-600 font-semibold mb-0.5">
+                        {isHelper ? 'Your response:' : 'Helper responded:'}
+                      </p>
                       <p className="text-xs text-slate-700">{stepMsg.content}</p>
                     </div>
+                  )}
+
+                  {/* Lister: approve step to unlock next */}
+                  {awaitingApproval && (
+                    <button
+                      onClick={() => handleApprove(idx)}
+                      disabled={approving}
+                      className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600
+                        disabled:opacity-50 text-white font-bold text-xs rounded-lg transition-colors"
+                    >
+                      {approving
+                        ? <Loader2 size={12} className="animate-spin" />
+                        : <CheckCircle2 size={12} />}
+                      Looks good — unlock next step
+                    </button>
+                  )}
+
+                  {/* Helper: waiting for lister to approve */}
+                  {isCurrent && !!stepMsg && isHelper && (
+                    <p className="mt-2 text-xs text-amber-700 font-medium">
+                      ⏳ Waiting for the task owner to review and unlock the next step…
+                    </p>
                   )}
                 </div>
               </div>
 
-              {/* Response input — current step, helper only */}
+              {/* Response input — current step, helper only, not yet responded */}
               {isCurrent && isHelper && !stepMsg && (
                 <form onSubmit={handleSubmit} className="mt-3 flex gap-2">
                   <input
@@ -659,16 +699,14 @@ export const ChatPage: React.FC = () => {
     }
   }, [offerId, listing, authUser]);
 
-  // ── Submit step response ───────────────────────────────────────────────────
+  // ── Submit step response (helper) ─────────────────────────────────────────
+  // The helper sends their response, but the step does NOT advance until the
+  // lister approves it. Only a task_message is stored here; advanceStep is
+  // called from handleApproveStep below.
 
   const handleStepRespond = useCallback(async (response: string, idx: number) => {
     if (!offerId || !listing || !authUser || !offer) return;
 
-    const nextIndex = idx + 1;
-    const totalSteps = listing.taskSteps.length;
-    const done = nextIndex >= totalSteps;
-
-    // Optimistic local message
     const optimistic: TaskMessage = {
       id: `tmp_step_${Date.now()}`,
       listingId: listing.id,
@@ -680,23 +718,49 @@ export const ChatPage: React.FC = () => {
       createdAt: new Date().toISOString(),
     };
     setMessages(prev => [...prev, optimistic]);
+
+    if (SUPABASE_CONFIGURED) {
+      const saved = await sendMessage({
+        listingId: listing.id,
+        offerId,
+        senderId: authUser.id,
+        type: 'step_response',
+        content: response,
+        stepIndex: idx,
+      });
+      if (saved) setMessages(prev => prev.map(m => m.id === optimistic.id ? saved : m));
+    }
+  }, [offerId, listing, authUser, offer]);
+
+  // ── Approve step (lister) — advances the helper to the next step ───────────
+
+  const handleApproveStep = useCallback(async (idx: number) => {
+    if (!offerId || !listing || !authUser) return;
+
+    const nextIndex = idx + 1;
+    const totalSteps = listing.taskSteps.length;
+    const done = nextIndex >= totalSteps;
+
+    // Optimistic update
     setStepIndex(nextIndex);
     setStepsCompleted(done);
 
     if (SUPABASE_CONFIGURED) {
+      // Persist approval as a message (triggers notification to helper)
+      // and advance the offer's step index.
       await Promise.all([
         sendMessage({
           listingId: listing.id,
           offerId,
           senderId: authUser.id,
-          type: 'step_response',
-          content: response,
+          type: 'step_approved',
+          content: `Step ${idx + 1} approved`,
           stepIndex: idx,
         }),
         advanceStep(offerId, nextIndex, totalSteps),
       ]);
     }
-  }, [offerId, listing, authUser, offer]);
+  }, [offerId, listing, authUser]);
 
   // ── Voice call ────────────────────────────────────────────────────────────
 
@@ -882,6 +946,8 @@ export const ChatPage: React.FC = () => {
               {tab === 'steps' && (
                 <StepQueuePanel
                   steps={listing.taskSteps}
+                  isRequester={isRequester}
+                  onApproveStep={handleApproveStep}
                   currentIndex={stepIndex}
                   stepsCompleted={stepsCompleted}
                   messages={messages}
@@ -915,7 +981,7 @@ export const ChatPage: React.FC = () => {
         )}
 
         {/* ── Lister: mark complete ───────────────────────────────────── */}
-        {isRequester && listing.status === 'in-progress' && offer.id === listing.acceptedOfferId && (
+        {isRequester && listing.status === 'in-progress' && (
           <div className="border-t border-slate-200 px-4 py-3">
             <button
               onClick={() => {
