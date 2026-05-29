@@ -118,7 +118,7 @@ export async function acceptOffer(offerId: string, listingId: string): Promise<b
 
   const { error: e3 } = await supabase
     .from('listings')
-    .update({ status: 'in_progress' } as never)
+    .update({ status: 'in_progress', accepted_offer_id: offerId } as never)
     .eq('id', listingId);
 
   if (e1 || e2 || e3) {

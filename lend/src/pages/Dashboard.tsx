@@ -185,7 +185,12 @@ export const Dashboard: React.FC = () => {
           ) : (
             <div className="space-y-5">
               {myListings.map(l => {
-                const acceptedOffer = l.acceptedOfferId ? offers.find(o => o.id === l.acceptedOfferId) : null;
+                // Prefer the persisted acceptedOfferId, but fall back to scanning
+                // offers — older accepted tasks never had accepted_offer_id stored.
+                const acceptedOffer =
+                  (l.acceptedOfferId && offers.find(o => o.id === l.acceptedOfferId)) ||
+                  offers.find(o => o.listingId === l.id && (o.status === 'accepted' || o.status === 'completed')) ||
+                  null;
                 return (
                   <div key={l.id}>
                     <ListingCard listing={l} />

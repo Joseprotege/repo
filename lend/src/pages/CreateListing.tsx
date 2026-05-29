@@ -78,7 +78,9 @@ export const CreateListing: React.FC = () => {
       canBeRemote,
       estimatedHours: hours,
       views: 0,
-      taskSteps: taskSteps.map((s, i) => ({ ...s, order: i })),
+      taskSteps: taskSteps
+        .filter(s => s.instruction.trim().length > 0)
+        .map((s, i) => ({ ...s, order: i })),
       isPaid,
       budgetCents: isPaid ? Math.round(budgetDollars * 100) : 0,
     };
