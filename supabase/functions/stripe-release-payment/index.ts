@@ -65,6 +65,8 @@ Deno.serve(async (req: Request) => {
 
     return json({ ok: true, status: 'released' });
   } catch (e) {
-    return err(e instanceof Error ? e.message : String(e), 500);
+    // Log full detail server-side; never leak internal/DB errors to the client.
+    console.error('[stripe-release-payment]', e instanceof Error ? e.stack ?? e.message : String(e));
+    return err('Something went wrong releasing the payment. Please try again.', 500);
   }
 });

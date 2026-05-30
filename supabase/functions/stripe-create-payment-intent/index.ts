@@ -87,6 +87,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ client_secret: pi.client_secret, payment_intent_id: pi.id });
   } catch (e) {
-    return err(e instanceof Error ? e.message : String(e), 500);
+    console.error('[stripe-create-payment-intent]', e instanceof Error ? e.stack ?? e.message : String(e));
+    return err('Something went wrong setting up the payment. Please try again.', 500);
   }
 });
