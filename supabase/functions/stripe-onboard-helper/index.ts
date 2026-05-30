@@ -71,6 +71,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ url: link.url, account_id: accountId });
   } catch (e) {
-    return err(e instanceof Error ? e.message : String(e), 500);
+    console.error('[stripe-onboard-helper]', e instanceof Error ? e.stack ?? e.message : String(e));
+    return err('Something went wrong starting Stripe onboarding. Please try again.', 500);
   }
 });
