@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/notify';
+import { friendlyError } from '../lib/errors';
 
 export interface BroadcastRow {
   id: string; sender_id: string | null; area_label: string; category: string;
@@ -32,7 +34,11 @@ export async function sendBroadcast(broadcast: BroadcastInsert): Promise<Broadca
     .select()
     .single();
 
-  if (error) { console.error('[broadcasts] sendBroadcast:', error.message); return null; }
+  if (error) {
+    console.error('[broadcasts] sendBroadcast:', error.message);
+    notify.error(friendlyError(error, "Couldn't send your broadcast. Please try again."));
+    return null;
+  }
   return data as BroadcastRow;
 }
 

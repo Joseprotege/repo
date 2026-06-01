@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/notify';
+import { friendlyError } from '../lib/errors';
 
 export interface ProfileRow {
   id: string; username: string; display_name: string; bio: string;
@@ -57,7 +59,11 @@ export async function updateProfile(
     .update(updates as never)
     .eq('id', userId);
 
-  if (error) { console.error('[profiles] updateProfile:', error.message); return false; }
+  if (error) {
+    console.error('[profiles] updateProfile:', error.message);
+    notify.error(friendlyError(error, "Couldn't save your profile. Please try again."));
+    return false;
+  }
   return true;
 }
 

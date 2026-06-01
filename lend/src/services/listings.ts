@@ -3,6 +3,8 @@
  * Components import from here, never directly from supabase client.
  */
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/notify';
+import { friendlyError } from '../lib/errors';
 
 export interface ListingRow {
   id: string; user_id: string; title: string; description: string;
@@ -62,7 +64,11 @@ export async function createListing(listing: ListingInsert): Promise<ListingRow 
     .select()
     .single();
 
-  if (error) { console.error('[listings] createListing:', error.message); return null; }
+  if (error) {
+    console.error('[listings] createListing:', error.message);
+    notify.error(friendlyError(error, "Couldn't post your task. Please try again."));
+    return null;
+  }
   return data as ListingRow;
 }
 

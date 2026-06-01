@@ -79,8 +79,22 @@ directly with the anon key.
 - **XSS**: confirmed no `dangerouslySetInnerHTML` / `innerHTML` anywhere — React
   escapes all rendered user content, so stored content is not an injection vector.
 
-Follow-up (Phase 4 polish): surface the DB rate-limit message in the UI for the
-rare legit user who trips a cap (currently logged + generic failure).
+## Phase 4 — launch-readiness polish (in progress)
+
+- **User-facing errors**: write services now surface real failures via a toast
+  bus (`lib/notify.ts` + `components/common/Toaster.tsx`). DB rate-limit and
+  constraint messages are mapped to friendly text in `lib/errors.ts` and shown
+  to the user instead of failing silently.
+- **Crash safety**: root `ErrorBoundary` (`components/common/ErrorBoundary.tsx`)
+  shows a recovery screen instead of a blank page; it's the hook point for an
+  error-monitoring service (Sentry) later.
+- **Helper earnings**: new Earnings tab on the Dashboard
+  (`components/user/EarningsPanel.tsx` + `fetchHelperEarnings()`), showing total
+  paid out, escrow-held, paid-task count, and payout history.
+- **Code-splitting**: routes are lazy-loaded — initial JS bundle dropped from
+  ~708 KB to ~535 KB (193 → 154 KB gzipped); each page loads on demand.
+
+Remaining for launch: optional Sentry wiring (needs a DSN), final mobile QA pass.
 
 ## Webhook scope (known item)
 

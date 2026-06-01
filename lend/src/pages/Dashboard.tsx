@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus, CheckCircle, Clock, AlertTriangle, ArrowRight, Star, BarChart3,
-  Handshake, ListTodo, MessageCircle,
+  Handshake, ListTodo, MessageCircle, Wallet,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ListingCard } from '../components/listing/ListingCard';
 import { ReliabilityMeter } from '../components/common/ReliabilityMeter';
 import { OfferCard } from '../components/offer/OfferCard';
 import { Avatar } from '../components/common/Avatar';
+import { EarningsPanel } from '../components/user/EarningsPanel';
 
-type DashTab = 'overview' | 'my-listings' | 'my-offers' | 'connections';
+type DashTab = 'overview' | 'my-listings' | 'my-offers' | 'earnings' | 'connections';
 
 export const Dashboard: React.FC = () => {
   const { currentUser, listings, offers, users } = useApp();
@@ -85,6 +86,7 @@ export const Dashboard: React.FC = () => {
           ['overview',     'Overview'],
           ['my-listings',  `My Tasks (${myListings.length})`],
           ['my-offers',    `My Offers (${myOffers.length})`],
+          ['earnings',     'Earnings'],
           ['connections',  `Connections (${connections.length})`],
         ] as [DashTab, string][]).map(([t, label]) => (
           <button
@@ -255,6 +257,17 @@ export const Dashboard: React.FC = () => {
               );
             })
           )}
+        </div>
+      )}
+
+      {/* ── EARNINGS ────────────────────────────────────────────── */}
+      {tab === 'earnings' && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Wallet size={18} className="text-emerald-600" />
+            <h2 className="font-bold text-slate-900">Your earnings as a helper</h2>
+          </div>
+          <EarningsPanel userId={currentUser.id} />
         </div>
       )}
 

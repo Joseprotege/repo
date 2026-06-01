@@ -4,6 +4,8 @@
  */
 import { supabase, SUPABASE_CONFIGURED } from '../lib/supabase';
 import { adaptTaskMessage } from '../lib/adapters';
+import { notify } from '../lib/notify';
+import { friendlyError } from '../lib/errors';
 import type { TaskMessage, TaskMessageType } from '../types';
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
@@ -44,7 +46,11 @@ export async function sendMessage(input: SendMessageInput): Promise<TaskMessage 
     })
     .select()
     .single();
-  if (error) { console.error('[messages] sendMessage error:', error); return null; }
+  if (error) {
+    console.error('[messages] sendMessage error:', error);
+    notify.error(friendlyError(error, "Couldn't send your message. Please try again."));
+    return null;
+  }
   return adaptTaskMessage(data as unknown as Record<string, unknown>);
 }
 

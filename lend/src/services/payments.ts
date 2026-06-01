@@ -139,6 +139,50 @@ export async function cancelPayment(
   return true;
 }
 
+// ── Earnings (helper side) ──────────────────────────────────────────────────────
+
+export interface HelperEarnings {
+  /** Money already paid out (status released), in cents. */
+  releasedCents: number;
+  /** Money currently held in escrow, not yet released, in cents. */
+  pendingCents: number;
+  /** Count of paid tasks completed (released). */
+  completedCount: number;
+  /** Full payout history, newest first. */
+  payouts: PaymentRequest[];
+}
+
+/**
+ * Fetch everything a helper has earned: total released, total currently held in
+ * escrow, and the full list of payment requests where they are the helper.
+ * RLS already restricts payment_requests to the requester/helper, but we also
+ * filter by helper_id so a helper only sees their own earnings.
+ */
+export async function fetchHelperEarnings(userId: string): Promise<HelperEarnings> {
+  const empty: HelperEarnings = { releasedCents: 0, pendingCents: 0, completedCount: 0, payouts: [] };
+  if (!SUPABASE_CONFIGURED) return empty;
+
+  const { data, error } = await supabase
+    .from('payment_requests')
+    .select('*')
+    .eq('helper_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) { console.error('[payments] fetchHelperEarnings error:', error); return empty; }
+
+  const payouts = (data ?? []).map(r => adaptPaymentRequest(r as unknown as Record<string, unknown>));
+
+  let releasedCents = 0;
+  let pendingCents = 0;
+  let completedCount = 0;
+  for (const p of payouts) {
+    if (p.status === 'released') { releasedCents += p.helperPayoutCents; completedCount += 1; }
+    else if (p.status === 'held') { pendingCents += p.helperPayoutCents; }
+  }
+
+  return { releasedCents, pendingCents, completedCount, payouts };
+}
+
 // ── Stripe Connect ────────────────────────────────────────────────────────────
 
 /**

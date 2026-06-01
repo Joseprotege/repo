@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { notify } from '../lib/notify';
+import { friendlyError } from '../lib/errors';
 
 export interface OfferRow {
   id: string; listing_id: string; user_id: string; message: string;
@@ -98,7 +100,11 @@ export async function createOffer(offer: OfferInsert): Promise<OfferRow | null> 
     .select()
     .single();
 
-  if (error) { console.error('[offers] createOffer:', error.message); return null; }
+  if (error) {
+    console.error('[offers] createOffer:', error.message);
+    notify.error(friendlyError(error, "Couldn't submit your offer. Please try again."));
+    return null;
+  }
   return data as OfferRow;
 }
 
@@ -123,6 +129,7 @@ export async function acceptOffer(offerId: string, listingId: string): Promise<b
 
   if (e1 || e2 || e3) {
     console.error('[offers] acceptOffer errors:', e1?.message, e2?.message, e3?.message);
+    notify.error(friendlyError(e1 || e2 || e3, "Couldn't accept the offer. Please try again."));
     return false;
   }
   return true;
@@ -135,7 +142,11 @@ export async function completeOffer(offerId: string, listingId: string): Promise
   const { error: e2 } = await supabase
     .from('listings').update({ status: 'completed' } as never).eq('id', listingId);
 
-  if (e1 || e2) { console.error('[offers] completeOffer:', e1?.message, e2?.message); return false; }
+  if (e1 || e2) {
+    console.error('[offers] completeOffer:', e1?.message, e2?.message);
+    notify.error(friendlyError(e1 || e2, "Couldn't mark the task complete. Please try again."));
+    return false;
+  }
   return true;
 }
 
@@ -161,6 +172,10 @@ export async function submitRating(
     .update(updates as never)
     .eq('id', offerId);
 
-  if (error) { console.error('[offers] submitRating:', error.message); return false; }
+  if (error) {
+    console.error('[offers] submitRating:', error.message);
+    notify.error(friendlyError(error, "Couldn't submit your review. Please try again."));
+    return false;
+  }
   return true;
 }

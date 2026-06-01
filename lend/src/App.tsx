@@ -1,24 +1,39 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
-import { Home } from './pages/Home';
-import { Browse } from './pages/Browse';
-import { ListingPage } from './pages/ListingPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { CreateListing } from './pages/CreateListing';
-import { Dashboard } from './pages/Dashboard';
-import { PulsePage } from './pages/PulsePage';
-import { LoginPage } from './pages/auth/LoginPage';
-import { SignupPage } from './pages/auth/SignupPage';
-import { TermsPage } from './pages/legal/TermsPage';
-import { PrivacyPage } from './pages/legal/PrivacyPage';
-import { ChatPage } from './pages/ChatPage';
-import { FeePage } from './pages/FeePage';
+import { Toaster } from './components/common/Toaster';
 import { GlobalVoiceListener } from './components/app/GlobalVoiceListener';
 import './index.css';
+
+// Eager: the landing page (first paint). Everything else is lazy so the initial
+// bundle stays small and each route's code loads on demand.
+import { Home } from './pages/Home';
+
+const Browse       = lazy(() => import('./pages/Browse').then(m => ({ default: m.Browse })));
+const ListingPage  = lazy(() => import('./pages/ListingPage').then(m => ({ default: m.ListingPage })));
+const ProfilePage  = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const CreateListing = lazy(() => import('./pages/CreateListing').then(m => ({ default: m.CreateListing })));
+const Dashboard    = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const PulsePage    = lazy(() => import('./pages/PulsePage').then(m => ({ default: m.PulsePage })));
+const LoginPage    = lazy(() => import('./pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
+const SignupPage   = lazy(() => import('./pages/auth/SignupPage').then(m => ({ default: m.SignupPage })));
+const TermsPage    = lazy(() => import('./pages/legal/TermsPage').then(m => ({ default: m.TermsPage })));
+const PrivacyPage  = lazy(() => import('./pages/legal/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
+const ChatPage     = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
+const FeePage      = lazy(() => import('./pages/FeePage').then(m => ({ default: m.FeePage })));
+
+function RouteFallback() {
+  return (
+    <div className="flex items-center justify-center py-32">
+      <Loader2 className="animate-spin text-teal-500" size={28} />
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -31,6 +46,7 @@ export default function App() {
           <div className="min-h-screen flex flex-col bg-slate-100">
             <Navbar />
             <main className="flex-1">
+              <Suspense fallback={<RouteFallback />}>
               <Routes>
                 {/* Public routes */}
                 <Route path="/"            element={<Home />} />
@@ -64,8 +80,10 @@ export default function App() {
                   </div>
                 } />
               </Routes>
+              </Suspense>
             </main>
             <Footer />
+            <Toaster />
           </div>
         </AppProvider>
       </AuthProvider>
