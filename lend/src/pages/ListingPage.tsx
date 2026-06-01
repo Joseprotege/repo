@@ -18,6 +18,7 @@ import { ReviewModal } from '../components/common/ReviewModal';
 import { ReportModal } from '../components/common/ReportModal';
 import type { CompletionType } from '../types';
 import { NeighborhoodActivity } from '../components/common/NeighborhoodActivity';
+import { LIMITS } from '../lib/limits';
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -368,7 +369,7 @@ export const ListingPage: React.FC = () => {
                   value={broadcastNote}
                   onChange={e => setBroadcastNote(e.target.value)}
                   placeholder={`e.g. "Didn't expect a neighbor to show up so quickly. This app works."`}
-                  maxLength={160}
+                  maxLength={LIMITS.broadcastNote}
                   rows={2}
                   className="w-full px-3 py-2 text-sm border border-amber-200 bg-white/70 rounded-xl resize-none
                     focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-amber-400"
@@ -511,9 +512,13 @@ export const ListingPage: React.FC = () => {
                       placeholder="Tell them about your experience, availability, and why you're a great fit…"
                       rows={4}
                       required
+                      maxLength={LIMITS.offerMessage}
                       className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl resize-none
                         focus:outline-none focus:ring-2 focus:ring-teal-500"
                     />
+                    <div className="text-right text-xs text-slate-400 mt-1">
+                      {offerMsg.length}/{LIMITS.offerMessage}
+                    </div>
                   </div>
 
                   {/* Self-assessment sliders */}

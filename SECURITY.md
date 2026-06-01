@@ -23,15 +23,16 @@ public launch. Updated as part of the pre-launch security audit.
 - **Frontend security headers** (Vercel): CSP, HSTS, X-Frame-Options DENY,
   nosniff, Referrer-Policy, Permissions-Policy. ✅ See `lend/vercel.json`.
 
-## 🔴 REQUIRED before launch — credential rotation
+## Credential rotation
 
-These were exposed in chat/working sessions during development and **must be
-rotated** before any real users touch the system:
+These were exposed in chat/working sessions during development and have now been
+rotated:
 
-- [ ] **Supabase access token** `sbp_...` — Supabase → Account → Access Tokens →
-      revoke. (CLI-only token; revoking does not affect the running app.)
-- [ ] **Stripe secret key** — Stripe → Developers → API keys → roll the secret
-      key, then update `STRIPE_SECRET_KEY` in Supabase Edge Function secrets.
+- [x] **Supabase access token** `sbp_...` — old leaked token (`sbp_1dfd…`) no
+      longer present in Account → Access Tokens; remaining active CLI token was
+      never shared. (CLI-only token; deleting does not affect the running app.)
+- [x] **Stripe secret key** — rolled in Stripe → Developers → API keys; new
+      value updated in Supabase Edge Function secrets as `STRIPE_SECRET_KEY`.
 - [ ] **Switch Stripe from test mode to live keys** when ready for real money,
       and update the webhook endpoint + `STRIPE_WEBHOOK_SECRET` accordingly.
 
@@ -45,6 +46,41 @@ rotated** before any real users touch the system:
       depth, consider restricting once the production domain is fixed.
 - [ ] Confirm **RLS is enabled on every table** (see migration 002) — tracked in
       the RLS hardening pass (phase 2).
+
+## Phase 2 — RLS / data-privacy hardening (done)
+
+Migrations 018 + 019 closed six over-permissive policies. See migration headers
+for full rationale. Summary:
+
+- `payment_requests` UPDATE restricted to requester (helpers had write access).
+- `reliability_scores` user self-UPDATE removed (only the SECURITY DEFINER
+  trigger may write scores).
+- `offers` UPDATE split into lister vs helper policies — helper can no longer
+  self-accept / self-complete; helper UPDATE locked to `completed` rows only.
+- `profiles` UPDATE column-locked: Stripe + verification flags now writable only
+  by service_role (the webhook).
+- `notifications` UPDATE column-locked to the `read` column.
+- `task_messages` INSERT now requires the offer to be `accepted`/`completed`.
+
+## Phase 3 — abuse & spam prevention (done)
+
+Defense lives in the database so it can't be bypassed by hitting the REST API
+directly with the anon key.
+
+- **Content length caps** (migration 020): `CHECK` constraints on every
+  free-text / array / jsonb column (listings, offers, task_messages,
+  broadcasts, reports, profiles). Generous limits — they stop megabyte payloads,
+  not normal input. Added `NOT VALID` so they never fail on legacy rows.
+- **Per-user rate limits** (migration 021): generic `enforce_rate_limit()`
+  BEFORE INSERT trigger. Caps: listings 10/hr, offers 20/hr, messages 30/min,
+  broadcasts 5/hr, reports 10/hr. service_role is exempt.
+- **Frontend caps**: `lend/src/lib/limits.ts` centralizes UI `maxLength` values
+  (always ≤ the DB caps) so users get friendly counters instead of DB errors.
+- **XSS**: confirmed no `dangerouslySetInnerHTML` / `innerHTML` anywhere — React
+  escapes all rendered user content, so stored content is not an injection vector.
+
+Follow-up (Phase 4 polish): surface the DB rate-limit message in the UI for the
+rare legit user who trips a cap (currently logged + generic failure).
 
 ## Webhook scope (known item)
 

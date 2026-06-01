@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { ImageUploader } from '../components/common/ImageUploader';
 import { StepEditor } from '../components/listing/StepEditor';
 import type { Category, UrgencyLevel, Listing, TaskStep } from '../types';
+import { LIMITS } from '../lib/limits';
 
 const CATEGORIES: { value: Category; label: string; icon: string }[] = [
   { value: 'home-repairs',  label: 'Home Repairs',    icon: '🔧' },
@@ -149,11 +150,12 @@ export const CreateListing: React.FC = () => {
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Describe exactly what you need done, any requirements, schedule, tools available, compensation offered…"
                   rows={6}
+                  maxLength={LIMITS.listingDescription}
                   className="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl resize-none
                     focus:outline-none focus:ring-2 focus:ring-teal-500"
                 />
                 <p className="text-xs text-slate-400 mt-1">
-                  The more detail you provide, the better offers you'll attract ({description.length} chars)
+                  The more detail you provide, the better offers you'll attract ({description.length}/{LIMITS.listingDescription})
                 </p>
               </div>
 

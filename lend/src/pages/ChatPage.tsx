@@ -30,6 +30,7 @@ import { SUPABASE_CONFIGURED } from '../lib/supabase';
 import { STRIPE_CONFIGURED } from '../lib/stripe';
 import { FEE_TIERS } from '../types';
 import type { TaskMessage, PaymentRequest, TaskStep } from '../types';
+import { LIMITS } from '../lib/limits';
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -197,6 +198,7 @@ const StepQueuePanel: React.FC<StepQueueProps> = ({
                     value={response}
                     onChange={e => setResponse(e.target.value)}
                     placeholder="Respond to unlock the next step…"
+                    maxLength={LIMITS.stepResponse}
                     className="flex-1 px-3 py-2 text-sm border border-teal-300 rounded-lg
                       focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
@@ -326,6 +328,7 @@ const DMThread: React.FC<DMThreadProps> = ({ messages, currentUserId, otherUser,
             value={text}
             onChange={e => setText(e.target.value)}
             placeholder="Type a message…"
+            maxLength={LIMITS.chatMessage}
             className="flex-1 px-4 py-2.5 text-sm border border-slate-200 rounded-xl
               focus:outline-none focus:ring-2 focus:ring-teal-500"
           />
