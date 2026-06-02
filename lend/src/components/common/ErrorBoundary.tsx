@@ -1,4 +1,5 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react';
+import { reportError } from '../../lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -9,8 +10,8 @@ interface State {
 
 /**
  * Root-level error boundary. Catches render-time crashes anywhere in the tree
- * and shows a recovery screen instead of a blank white page. Logs to the console
- * (and is the natural hook point for an error-monitoring service later).
+ * and shows a recovery screen instead of a blank white page. Reports to Sentry
+ * when VITE_SENTRY_DSN is configured, otherwise logs to the console.
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
@@ -20,8 +21,8 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Hook point for Sentry/etc. For now, log it.
     console.error('[ErrorBoundary] Uncaught error:', error, info.componentStack);
+    reportError(error, { componentStack: info.componentStack ?? undefined });
   }
 
   handleReload = () => {
