@@ -1,5 +1,5 @@
 // PASTE THIS into Supabase Dashboard → Edge Functions → "stripe-release-payment"
-import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&deno-std=0.224.0';
+import Stripe from 'https://esm.sh/stripe@13.11.0?target=deno&deno-std=0.224.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 const corsHeaders = {

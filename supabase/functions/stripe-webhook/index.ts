@@ -1,7 +1,7 @@
 // PASTE THIS into Supabase Dashboard → Edge Functions → "stripe-webhook"
 // NOTE: When creating this function in the dashboard, disable JWT verification
 //       (there's a toggle in the function settings — Stripe signs its own requests).
-import Stripe from 'https://esm.sh/stripe@14.21.0?target=deno&deno-std=0.224.0';
+import Stripe from 'https://esm.sh/stripe@13.11.0?target=deno&deno-std=0.224.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
 function admin() {
