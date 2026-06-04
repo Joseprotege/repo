@@ -16,20 +16,30 @@ Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   const sig = req.headers.get('stripe-signature');
-  const secret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
-  if (!sig || !secret) return new Response('Missing signature', { status: 400 });
+  if (!sig) return new Response('Missing signature', { status: 400 });
 
   const key = Deno.env.get('STRIPE_SECRET_KEY');
   if (!key) return new Response('STRIPE_SECRET_KEY not set', { status: 500 });
   const stripe = new Stripe(key, { apiVersion: '2024-06-20', httpClient: Stripe.createFetchHttpClient() });
 
   const body = await req.text();
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, secret);
-  } catch (e) {
-    return new Response(`Signature error: ${e instanceof Error ? e.message : e}`, { status: 400 });
+
+  // Try platform secret first, then connected-account secret.
+  // Two separate Stripe webhook endpoints (one for "Your account" events,
+  // one for "Connected accounts" events) each have their own signing secret.
+  const secrets = [
+    Deno.env.get('STRIPE_WEBHOOK_SECRET'),
+    Deno.env.get('STRIPE_CONNECT_WEBHOOK_SECRET'),
+  ].filter(Boolean) as string[];
+
+  let event: Stripe.Event | null = null;
+  for (const secret of secrets) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, sig, secret);
+      break;
+    } catch { /* try next */ }
   }
+  if (!event) return new Response('Signature verification failed', { status: 400 });
 
   const db = admin();
 
