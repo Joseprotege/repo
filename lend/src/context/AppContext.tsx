@@ -189,6 +189,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setOffers(offerRows.map(r => adaptOffer(r as unknown as Record<string, unknown>)));
         }
 
+        // Fetch profiles for offerers on our listings who aren't already in state.
+        // Without this, OfferCard silently renders nothing because getUserById()
+        // returns undefined for helpers the lister hasn't interacted with before.
+        const offererIds = [...new Set(offerRows.map(o => o.user_id))].filter(id => id !== userId);
+        if (offererIds.length > 0) {
+          const offererProfiles = (await Promise.all(offererIds.map(id => fetchProfile(id))))
+            .filter((p): p is NonNullable<typeof p> => p !== null);
+          if (mounted && offererProfiles.length > 0) {
+            const adaptedOfferers = offererProfiles.map(
+              p => adaptProfile(p as unknown as Record<string, unknown>),
+            );
+            setUsers(prev => {
+              const existing = new Set(prev.map(u => u.id));
+              return [...prev, ...adaptedOfferers.filter(u => !existing.has(u.id))];
+            });
+          }
+        }
+
         // Load the user's own listings (any status) + listings they've offered
         // on, and merge them into state. The public feed only carries OPEN
         // listings, so without this an accepted/in-progress task vanishes from
