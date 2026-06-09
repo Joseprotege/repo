@@ -60,9 +60,24 @@ Deno.serve(async (req: Request) => {
       return err('Helper has not connected a Stripe account yet', 409);
     }
 
-    // Reuse existing PI if already created
+    // Reuse existing PI only if it's still in a state that can accept payment.
+    // A stale PI (canceled, expired after 3DS, etc.) causes the Stripe
+    // PaymentElement to silently refuse to mount — clear it and create fresh.
     if (pr.stripe_payment_intent_id && pr.stripe_client_secret) {
-      return json({ client_secret: pr.stripe_client_secret, payment_intent_id: pr.stripe_payment_intent_id });
+      try {
+        const existing = await stripe.paymentIntents.retrieve(pr.stripe_payment_intent_id);
+        const reusable = ['requires_payment_method', 'requires_confirmation', 'requires_action'];
+        if (reusable.includes(existing.status)) {
+          return json({ client_secret: pr.stripe_client_secret, payment_intent_id: pr.stripe_payment_intent_id });
+        }
+        // Stale PI — clear it so we fall through to create a new one
+        await db.from('payment_requests').update({
+          stripe_payment_intent_id: null,
+          stripe_client_secret: null,
+        }).eq('id', pr.id);
+      } catch {
+        // PI retrieval failed — fall through and create a fresh one
+      }
     }
 
     const pi = await stripe.paymentIntents.create({
