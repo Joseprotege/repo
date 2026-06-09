@@ -497,7 +497,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
       </button>
 
       {expanded && (
-        <div className="px-4 pb-4 space-y-3">
+        <div className="px-4 pb-4 space-y-3 overflow-y-auto max-h-[55dvh]">
           {loading ? (
             <div className="flex justify-center py-4">
               <Loader2 size={20} className="animate-spin text-slate-400" />
@@ -903,18 +903,18 @@ export const ChatPage: React.FC = () => {
   const taskDone = listing.status === 'completed';
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 page-enter">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-6 page-enter">
       {/* Back link */}
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm mb-5 group"
+        className="flex items-center gap-1.5 text-slate-500 hover:text-slate-700 text-sm mb-3 sm:mb-5 group"
       >
         <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
         Back to listing
       </button>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col"
-           style={{ height: 'calc(100vh - 14rem)' }}>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col
+           h-[calc(100dvh-9rem)] sm:h-[calc(100dvh-11rem)] md:h-[calc(100dvh-13rem)]">
 
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="border-b border-slate-200 px-5 py-4 flex items-center justify-between gap-3">
