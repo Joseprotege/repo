@@ -38,23 +38,38 @@ function centsToDisplay(cents: number) {
 
 const PaymentForm: React.FC<{
   amountCents: number;
+  clientSecret: string;
   onAuthorized: () => void;
-}> = ({ amountCents, onAuthorized }) => {
+}> = ({ amountCents, clientSecret, onAuthorized }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const [elementReady, setElementReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [succeeded, setSucceeded] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !elementReady) return;
     setSubmitting(true);
     setError(null);
 
+    // Step 1: validate the form fields before hitting Stripe's API.
+    // Required for @stripe/stripe-js v3+ — calling confirmPayment directly
+    // without this throws "elements should have a mounted PaymentElement".
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setError(submitError.message ?? 'Card validation failed');
+      setSubmitting(false);
+      return;
+    }
+
+    // Step 2: authorise (not capture) the funds. capture_method='manual' means
+    // the PI moves to 'requires_capture' — money is held until we explicitly
+    // capture it when the task is marked complete.
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
+      clientSecret,
       elements,
-      // Don't redirect — we want to stay on this page and show success inline
       redirect: 'if_required',
       confirmParams: {
         return_url: window.location.href,
@@ -67,7 +82,6 @@ const PaymentForm: React.FC<{
       return;
     }
 
-    // For capture_method='manual', the PI moves to 'requires_capture' on success
     if (paymentIntent && (paymentIntent.status === 'requires_capture'
                        || paymentIntent.status === 'succeeded'
                        || paymentIntent.status === 'processing')) {
@@ -92,7 +106,7 @@ const PaymentForm: React.FC<{
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement options={{ layout: 'tabs' }} />
+      <PaymentElement options={{ layout: 'tabs' }} onReady={() => setElementReady(true)} />
 
       {error && (
         <div className="flex items-start gap-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -103,14 +117,16 @@ const PaymentForm: React.FC<{
 
       <button
         type="submit"
-        disabled={!stripe || !elements || submitting}
+        disabled={!stripe || !elements || !elementReady || submitting}
         className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700
           disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors"
       >
         {submitting
           ? <Loader2 size={16} className="animate-spin" />
-          : <Lock size={16} />}
-        Authorize {centsToDisplay(amountCents)}
+          : !elementReady
+            ? <Loader2 size={16} className="animate-spin" />
+            : <Lock size={16} />}
+        {elementReady ? `Authorize ${centsToDisplay(amountCents)}` : 'Loading…'}
       </button>
 
       <p className="text-[10px] text-slate-400 text-center leading-relaxed">
@@ -217,9 +233,9 @@ export const StripePaymentModal: React.FC<Props> = ({
             </div>
           )}
 
-          {!loading && !error && elementsOptions && (
+          {!loading && !error && elementsOptions && clientSecret && (
             <Elements stripe={getStripe()} options={elementsOptions}>
-              <PaymentForm amountCents={amountCents} onAuthorized={onAuthorized} />
+              <PaymentForm amountCents={amountCents} clientSecret={clientSecret} onAuthorized={onAuthorized} />
             </Elements>
           )}
         </div>
