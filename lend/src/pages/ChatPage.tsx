@@ -356,6 +356,8 @@ interface PaymentPanelProps {
   requestedAmountCents: number;
   isRequester: boolean;
   taskCompleted: boolean;
+  listingTitle: string;
+  helperName: string;
 }
 
 const PaymentPanel: React.FC<PaymentPanelProps> = ({
@@ -366,6 +368,8 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   requestedAmountCents,
   isRequester,
   taskCompleted,
+  listingTitle,
+  helperName,
 }) => {
   const [payReq, setPayReq] = useState<PaymentRequest | null>(null);
   const [loading, setLoading] = useState(true);
@@ -373,6 +377,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -406,12 +411,12 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
     setActionLoading(false);
   };
 
-  // "Fund Escrow" — uses Stripe Elements when configured; falls back to
-  // direct DB update (mock mode) when STRIPE_CONFIGURED is false.
+  // "Fund Escrow" — show confirmation first, then open Stripe modal.
+  // Falls back to direct DB update (mock mode) when STRIPE_CONFIGURED is false.
   const handleHold = async () => {
     if (!payReq) return;
     if (STRIPE_CONFIGURED) {
-      setStripeModalOpen(true);
+      setShowConfirmation(true);
       return;
     }
     setActionLoading(true);
@@ -423,12 +428,19 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   // Called by the Stripe modal once funds are authorized
   const handleStripeAuthorized = () => {
     setStripeModalOpen(false);
-    // Optimistic — the webhook flips the DB row but the UI should react now
+    // Optimistic update — don't wait for webhook
     setPayReq(p => p ? { ...p, status: 'held' } : p);
-    // Re-fetch shortly to catch the webhook update
+    // Re-fetch to sync with DB, but never downgrade held → pending
+    // (the webhook may not have fired within this window)
     setTimeout(() => {
-      fetchPaymentRequest(offerId).then(req => req && setPayReq(req));
-    }, 1500);
+      fetchPaymentRequest(offerId).then(req => {
+        if (!req) return;
+        setPayReq(prev => {
+          if (prev?.status === 'held' && req.status === 'pending') return prev;
+          return req;
+        });
+      });
+    }, 3000);
   };
 
   // "Release" — captures the held PaymentIntent via the Edge Function when
@@ -535,7 +547,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                 </button>
               )}
 
-              {payReq?.status === 'pending' && isRequester && (
+              {payReq?.status === 'pending' && isRequester && !showConfirmation && (
                 <div className="space-y-2">
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800 flex items-start gap-1.5">
                     <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
@@ -555,6 +567,52 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                       Stripe is not configured — clicking will mock the hold for testing
                     </p>
                   )}
+                </div>
+              )}
+
+              {payReq?.status === 'pending' && isRequester && showConfirmation && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm mb-0.5">Confirm payment</p>
+                    <p className="text-xs text-slate-500">Review the details before your card is charged</p>
+                  </div>
+                  <div className="bg-white border border-blue-100 rounded-lg p-3 space-y-1.5 text-xs">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-slate-500 shrink-0">Task</span>
+                      <span className="font-semibold text-slate-700 text-right truncate">{listingTitle}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Helper</span>
+                      <span className="font-semibold text-slate-700">{helperName}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">You authorize</span>
+                      <span className="font-semibold text-slate-700">{centsToDisplay(payReq.amountCents)}</span>
+                    </div>
+                    <div className="flex justify-between text-teal-700 border-t border-slate-100 pt-1.5">
+                      <span className="font-semibold">Helper receives</span>
+                      <span className="font-bold">{centsToDisplay(helperPayoutCents)}</span>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    Funds are authorized now but only released to {helperName} when you mark this task complete.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowConfirmation(false)}
+                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => { setShowConfirmation(false); setStripeModalOpen(true); }}
+                      className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700
+                        text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                    >
+                      <Lock size={14} />
+                      Confirm & Pay
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -980,6 +1038,8 @@ export const ChatPage: React.FC = () => {
             requestedAmountCents={listing.budgetCents || offer.requestedAmount}
             isRequester={isRequester}
             taskCompleted={taskDone}
+            listingTitle={listing.title}
+            helperName={helper?.displayName ?? 'the helper'}
           />
         )}
 
