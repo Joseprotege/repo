@@ -378,6 +378,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   const [actionLoading, setActionLoading] = useState(false);
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -448,9 +449,14 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   const handleRelease = async () => {
     if (!payReq) return;
     setActionLoading(true);
+    setReleaseError(null);
     if (STRIPE_CONFIGURED) {
-      const { ok } = await releasePaymentViaStripe(payReq.id);
-      if (ok) setPayReq(p => p ? { ...p, status: 'released' } : p);
+      const { ok, error } = await releasePaymentViaStripe(payReq.id);
+      if (ok) {
+        setPayReq(p => p ? { ...p, status: 'released' } : p);
+      } else {
+        setReleaseError(error ?? 'Could not release the payment. Please try again.');
+      }
     } else {
       await releasePayment(payReq.id);
       setPayReq(p => p ? { ...p, status: 'released' } : p);
@@ -617,15 +623,23 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
               )}
 
               {payReq?.status === 'held' && isRequester && taskCompleted && (
-                <button
-                  onClick={handleRelease}
-                  disabled={actionLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700
-                    disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
-                >
-                  {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  Release Payment to Helper
-                </button>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleRelease}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700
+                      disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                  >
+                    {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    Release Payment to Helper
+                  </button>
+                  {releaseError && (
+                    <div className="flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                      {releaseError}
+                    </div>
+                  )}
+                </div>
               )}
 
               {payReq?.status === 'held' && isRequester && !taskCompleted && (
