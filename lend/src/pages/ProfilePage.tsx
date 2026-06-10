@@ -8,6 +8,7 @@ import { ListingCard } from '../components/listing/ListingCard';
 import { EditProfileModal } from '../components/common/EditProfileModal';
 import { ReportModal } from '../components/common/ReportModal';
 import { StripeConnectCard } from '../components/user/StripeConnectCard';
+import { DangerZoneCard } from '../components/user/DangerZoneCard';
 import { Flag } from 'lucide-react';
 
 type Tab = 'listings' | 'reliability' | 'connections';
@@ -191,6 +192,8 @@ export const ProfilePage: React.FC = () => {
                 {userListings.map(l => <ListingCard key={l.id} listing={l} />)}
               </div>
             )}
+
+            {isMe && <DangerZoneCard username={user.username} />}
           </div>
         )}
 

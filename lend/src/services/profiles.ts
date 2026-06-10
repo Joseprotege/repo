@@ -78,3 +78,29 @@ export async function fetchReliability(userId: string): Promise<ReliabilityRow |
   if (error) { console.error('[profiles] fetchReliability:', error.message); return null; }
   return data as ReliabilityRow;
 }
+
+/**
+ * Permanently delete the current user's account via the delete-account
+ * Edge Function. Cascades through profiles, listings, offers, etc.
+ * Fails with a friendly message if a payment is still held in escrow.
+ */
+export async function deleteAccount(): Promise<{ ok: boolean; error: string | null }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
+    if (error) {
+      // supabase-js wraps non-2xx responses; try to surface the function's message
+      let msg = error.message;
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === 'function') {
+        try {
+          const body = await ctx.json();
+          if (body?.error) msg = body.error;
+        } catch { /* keep generic message */ }
+      }
+      return { ok: false, error: msg };
+    }
+    return { ok: !!(data as { ok?: boolean })?.ok, error: null };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
