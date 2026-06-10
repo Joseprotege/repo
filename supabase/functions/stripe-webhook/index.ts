@@ -33,9 +33,10 @@ Deno.serve(async (req: Request) => {
   ].filter(Boolean) as string[];
 
   let event: Stripe.Event | null = null;
+  const cryptoProvider = Stripe.createSubtleCryptoProvider();
   for (const secret of secrets) {
     try {
-      event = await stripe.webhooks.constructEventAsync(body, sig, secret);
+      event = await stripe.webhooks.constructEventAsync(body, sig, secret, undefined, cryptoProvider);
       break;
     } catch { /* try next */ }
   }
