@@ -125,6 +125,23 @@ export async function releasePayment(paymentId: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Re-open a cancelled payment so the requester can fund it again.
+ * The Stripe PI fields were already cleared on cancel, so flipping the status
+ * back to 'pending' re-enters the normal flow — funding will create a fresh
+ * PaymentIntent. The status guard prevents re-opening released/refunded rows.
+ */
+export async function reactivatePayment(paymentId: string): Promise<boolean> {
+  if (!SUPABASE_CONFIGURED) return true;
+  const { error } = await supabase
+    .from('payment_requests')
+    .update({ status: 'pending', funded_at: null })
+    .eq('id', paymentId)
+    .eq('status', 'cancelled');
+  if (error) { console.error('[payments] reactivatePayment error:', error); return false; }
+  return true;
+}
+
 /** Cancel / refund a payment request. */
 export async function cancelPayment(
   paymentId: string,

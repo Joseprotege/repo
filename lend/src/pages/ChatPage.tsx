@@ -12,7 +12,7 @@ import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, MessageCircle, ListChecks, Phone, CheckCircle2,
   ChevronDown, ChevronUp, Send, Lock, CreditCard, Loader2,
-  DollarSign, Info, AlertTriangle, CheckCheck,
+  DollarSign, Info, AlertTriangle, CheckCheck, RotateCcw,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +25,7 @@ import {
 import {
   fetchPaymentRequest, createPaymentRequest, releasePayment, holdPayment,
   releasePaymentViaStripe, cancelPaymentViaStripe, cancelPayment,
-  getActiveFeePercent, computeFeeBreakdown,
+  reactivatePayment, getActiveFeePercent, computeFeeBreakdown,
 } from '../services/payments';
 import { SUPABASE_CONFIGURED } from '../lib/supabase';
 import { STRIPE_CONFIGURED } from '../lib/stripe';
@@ -485,6 +485,21 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
     setActionLoading(false);
   };
 
+  // "Restart" — re-opens a cancelled payment. The PI fields were cleared on
+  // cancel, so funding again creates a fresh PaymentIntent.
+  const handleReactivate = async () => {
+    if (!payReq) return;
+    setActionLoading(true);
+    setReleaseError(null);
+    const ok = await reactivatePayment(payReq.id);
+    if (ok) {
+      setPayReq(p => p ? { ...p, status: 'pending' } : p);
+    } else {
+      setReleaseError('Could not restart the payment. Please try again.');
+    }
+    setActionLoading(false);
+  };
+
   // "Release" — captures the held PaymentIntent via the Edge Function when
   // Stripe is configured; falls back to direct DB update otherwise.
   const handleRelease = async () => {
@@ -726,6 +741,29 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                 </div>
               )}
 
+              {payReq?.status === 'cancelled' && isRequester && (
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-500 text-center bg-slate-50 border border-slate-200 rounded-xl py-2">
+                    Payment cancelled. Any card hold has been voided.
+                  </div>
+                  <button
+                    onClick={handleReactivate}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-teal-600 hover:bg-teal-700
+                      disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                  >
+                    {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                    Restart payment
+                  </button>
+                  {releaseError && (
+                    <div className="flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                      {releaseError}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {payReq?.status === 'released' && (
                 <div className="flex items-center gap-2 text-sm text-emerald-700 font-semibold justify-center bg-emerald-50 border border-emerald-200 rounded-xl py-2">
                   <CheckCircle2 size={15} />
@@ -737,6 +775,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                 <div className="text-xs text-slate-500 text-center">
                   {payReq?.status === 'held' && '💰 Your payment is held securely. The lister will release it when the task is verified.'}
                   {payReq?.status === 'released' && `🎉 ${centsToDisplay(payReq.helperPayoutCents)} has been sent to your account.`}
+                  {payReq?.status === 'cancelled' && 'The lister cancelled this payment. They can restart it from their side at any time.'}
                   {(!payReq || payReq.status === 'pending') && 'Waiting for the lister to confirm payment terms.'}
                 </div>
               )}
