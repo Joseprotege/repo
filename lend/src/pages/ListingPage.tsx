@@ -3,7 +3,11 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   MapPin, Clock, Eye, Users, Wifi, ArrowLeft, ChevronDown, ChevronUp,
   Share2, Flag, Send, Sparkles, CheckCircle2, Star, MessageCircle,
+  Trash2, Loader2,
 } from 'lucide-react';
+import { deleteListing } from '../services/listings';
+import { listingHasHeldPayment } from '../services/payments';
+import { notify } from '../lib/notify';
 import { useApp } from '../context/AppContext';
 import { OfferCard } from '../components/offer/OfferCard';
 import { Avatar } from '../components/common/Avatar';
@@ -54,6 +58,8 @@ export const ListingPage: React.FC = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   // Report modal
   const [reportOpen, setReportOpen] = useState(false);
+  // Delete task
+  const [deleting, setDeleting] = useState(false);
 
   if (!listing) {
     return (
@@ -71,6 +77,27 @@ export const ListingPage: React.FC = () => {
   const alreadyOffered = offers.some(o => o.offererId === currentUser.id);
   const pendingOffers = offers.filter(o => o.status === 'pending');
   const acceptedOffer = listing.acceptedOfferId ? offers.find(o => o.id === listing.acceptedOfferId) : null;
+
+  const handleDeleteTask = async () => {
+    if (deleting) return;
+    if (!window.confirm('Delete this task? All offers, messages, and payment records for it will be permanently removed. This cannot be undone.')) return;
+    setDeleting(true);
+    // Guard: money in escrow must be released or cancelled before deletion,
+    // otherwise the lister's card hold and helper's payout would be orphaned.
+    if (await listingHasHeldPayment(listing.id)) {
+      notify.error('A payment is still held in escrow for this task. Release or cancel it from the task chat first.');
+      setDeleting(false);
+      return;
+    }
+    const ok = await deleteListing(listing.id);
+    if (!ok) {
+      notify.error("Couldn't delete the task. Please try again.");
+      setDeleting(false);
+      return;
+    }
+    notify.success('Task deleted.');
+    navigate('/dashboard');
+  };
 
   const handleAccept = (offerId: string) => {
     acceptOffer(offerId, listing.id);
@@ -170,13 +197,24 @@ export const ListingPage: React.FC = () => {
                 <button className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                   <Share2 size={16} />
                 </button>
-                <button
-                  onClick={() => setReportOpen(true)}
-                  title="Report this task"
-                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-600 transition-colors"
-                >
-                  <Flag size={16} />
-                </button>
+                {isOwner ? (
+                  <button
+                    onClick={handleDeleteTask}
+                    disabled={deleting}
+                    title="Delete this task"
+                    className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                  >
+                    {deleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setReportOpen(true)}
+                    title="Report this task"
+                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-red-600 transition-colors"
+                  >
+                    <Flag size={16} />
+                  </button>
+                )}
               </div>
             </div>
 

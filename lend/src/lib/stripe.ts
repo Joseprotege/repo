@@ -33,7 +33,19 @@ export async function invokeEdgeFunction<T = unknown>(
   }
   try {
     const { data, error } = await supabase.functions.invoke(name, { body });
-    if (error) return { data: null, error: error.message };
+    if (error) {
+      // Non-2xx responses arrive as FunctionsHttpError with the raw Response
+      // in .context — pull out the function's { error: "..." } message so the
+      // user sees the real reason instead of "non-2xx status code".
+      const ctx = (error as unknown as { context?: Response }).context;
+      if (ctx instanceof Response) {
+        try {
+          const parsed = await ctx.json();
+          if (typeof parsed?.error === 'string') return { data: null, error: parsed.error };
+        } catch { /* body not JSON — fall through to generic message */ }
+      }
+      return { data: null, error: error.message };
+    }
     return { data: data as T, error: null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);

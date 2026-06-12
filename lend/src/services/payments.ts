@@ -240,6 +240,37 @@ export async function releasePaymentViaStripe(
   return { ok: !!res.data.ok, error: null };
 }
 
+/**
+ * Cancels a pending/held payment via the Edge Function — voids the uncaptured
+ * Stripe authorization (releasing the hold on the lister's card) and marks
+ * the payment_request cancelled. Only the requester can cancel.
+ */
+export async function cancelPaymentViaStripe(
+  paymentRequestId: string,
+): Promise<{ ok: boolean; error: string | null }> {
+  if (!STRIPE_CONFIGURED) {
+    return { ok: false, error: 'Stripe is not configured yet.' };
+  }
+  const res = await invokeEdgeFunction<{ ok: boolean }>(
+    'stripe-cancel-payment',
+    { payment_request_id: paymentRequestId },
+  );
+  if (res.error || !res.data) return { ok: false, error: res.error };
+  return { ok: !!res.data.ok, error: null };
+}
+
+/** True if any payment on this listing is currently held in escrow. */
+export async function listingHasHeldPayment(listingId: string): Promise<boolean> {
+  if (!SUPABASE_CONFIGURED) return false;
+  const { count, error } = await supabase
+    .from('payment_requests')
+    .select('*', { count: 'exact', head: true })
+    .eq('listing_id', listingId)
+    .eq('status', 'held');
+  if (error) { console.error('[payments] listingHasHeldPayment:', error.message); return false; }
+  return (count ?? 0) > 0;
+}
+
 // ── Profile-side helpers ──────────────────────────────────────────────────────
 
 export interface StripeAccountStatus {

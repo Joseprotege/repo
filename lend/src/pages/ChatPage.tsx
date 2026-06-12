@@ -24,7 +24,8 @@ import {
 } from '../services/messages';
 import {
   fetchPaymentRequest, createPaymentRequest, releasePayment, holdPayment,
-  releasePaymentViaStripe, getActiveFeePercent, computeFeeBreakdown,
+  releasePaymentViaStripe, cancelPaymentViaStripe, cancelPayment,
+  getActiveFeePercent, computeFeeBreakdown,
 } from '../services/payments';
 import { SUPABASE_CONFIGURED } from '../lib/supabase';
 import { STRIPE_CONFIGURED } from '../lib/stripe';
@@ -462,6 +463,28 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
     }, 3000);
   };
 
+  // "Cancel" — voids the uncaptured Stripe authorization (releasing the hold
+  // on the lister's card) and marks the payment_request cancelled.
+  const handleCancelPayment = async () => {
+    if (!payReq) return;
+    if (!window.confirm('Cancel this payment? Any card hold will be voided and the helper will not be paid.')) return;
+    setActionLoading(true);
+    setReleaseError(null);
+    if (STRIPE_CONFIGURED) {
+      const { ok, error } = await cancelPaymentViaStripe(payReq.id);
+      if (ok) {
+        sessionStorage.removeItem(authorizedKey);
+        setPayReq(p => p ? { ...p, status: 'cancelled' } : p);
+      } else {
+        setReleaseError(error ?? 'Could not cancel the payment. Please try again.');
+      }
+    } else {
+      await cancelPayment(payReq.id);
+      setPayReq(p => p ? { ...p, status: 'cancelled' } : p);
+    }
+    setActionLoading(false);
+  };
+
   // "Release" — captures the held PaymentIntent via the Edge Function when
   // Stripe is configured; falls back to direct DB update otherwise.
   const handleRelease = async () => {
@@ -593,6 +616,19 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                       Stripe is not configured — clicking will mock the hold for testing
                     </p>
                   )}
+                  <button
+                    onClick={handleCancelPayment}
+                    disabled={actionLoading}
+                    className="w-full text-xs font-semibold text-slate-400 hover:text-red-500 py-1.5 transition-colors"
+                  >
+                    Cancel payment request
+                  </button>
+                  {releaseError && (
+                    <div className="flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                      {releaseError}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -653,6 +689,13 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                     {actionLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                     Release Payment to Helper
                   </button>
+                  <button
+                    onClick={handleCancelPayment}
+                    disabled={actionLoading}
+                    className="w-full text-xs font-semibold text-slate-400 hover:text-red-500 py-1.5 transition-colors"
+                  >
+                    Cancel payment & void card hold
+                  </button>
                   {releaseError && (
                     <div className="flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
                       <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
@@ -663,8 +706,23 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
               )}
 
               {payReq?.status === 'held' && isRequester && !taskCompleted && (
-                <div className="text-xs text-slate-500 text-center bg-slate-50 border border-slate-200 rounded-xl py-2">
-                  Funds held in escrow. Mark the task complete to release payment.
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-500 text-center bg-slate-50 border border-slate-200 rounded-xl py-2">
+                    Funds held in escrow. Mark the task complete to release payment.
+                  </div>
+                  <button
+                    onClick={handleCancelPayment}
+                    disabled={actionLoading}
+                    className="w-full text-xs font-semibold text-slate-400 hover:text-red-500 py-1.5 transition-colors"
+                  >
+                    Cancel payment & void card hold
+                  </button>
+                  {releaseError && (
+                    <div className="flex items-start gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                      <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                      {releaseError}
+                    </div>
+                  )}
                 </div>
               )}
 

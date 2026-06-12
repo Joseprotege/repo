@@ -52,6 +52,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Clean up storage first — files owned by the user (avatar, listing
+    // photos) reference auth.users and can block the auth delete below.
+    for (const bucket of ['avatars', 'listing-photos']) {
+      try {
+        const { data: files } = await db.storage.from(bucket).list(user.id);
+        if (files && files.length > 0) {
+          await db.storage.from(bucket).remove(files.map(f => `${user.id}/${f.name}`));
+        }
+      } catch (e) {
+        console.error(`[delete-account] storage cleanup (${bucket}):`, e instanceof Error ? e.message : String(e));
+        // Best-effort — continue with deletion
+      }
+    }
+
+    // Delete the profile row explicitly — cascades listings, offers,
+    // messages, notifications, payment_requests, reliability_scores.
+    const { error: profileErr } = await db.from('profiles').delete().eq('id', user.id);
+    if (profileErr) {
+      console.error('[delete-account] profile delete:', profileErr.message);
+      throw new Error(`Profile delete failed: ${profileErr.message}`);
+    }
+
     // Delete via the Auth Admin REST API.
     // supabase-js's auth.admin.deleteUser() uses a Node.js-specific code path
     // that throws in the Deno edge runtime — call the endpoint directly instead.
