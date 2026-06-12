@@ -88,19 +88,18 @@ export async function deleteAccount(): Promise<{ ok: boolean; error: string | nu
   try {
     const { data, error } = await supabase.functions.invoke('delete-account', { body: {} });
     if (error) {
-      // supabase-js wraps non-2xx responses; try to surface the function's message
-      let msg = error.message;
-      const ctx = (error as { context?: Response }).context;
-      if (ctx && typeof ctx.json === 'function') {
+      // supabase-js wraps 4xx/5xx as FunctionsHttpError; .context is the raw Response
+      const ctx = (error as unknown as { context?: Response }).context;
+      if (ctx instanceof Response) {
         try {
           const body = await ctx.json();
-          if (body?.error) msg = body.error;
-        } catch { /* keep generic message */ }
+          if (typeof body?.error === 'string') return { ok: false, error: body.error };
+        } catch { /* non-JSON or already-consumed body */ }
       }
-      return { ok: false, error: msg };
+      return { ok: false, error: 'Could not delete your account. Please try again.' };
     }
     return { ok: !!(data as { ok?: boolean })?.ok, error: null };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    return { ok: false, error: 'Could not delete your account. Please try again.' };
   }
 }

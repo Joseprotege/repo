@@ -380,6 +380,10 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [releaseError, setReleaseError] = useState<string | null>(null);
 
+  // Key used to persist "payment was authorized but webhook hasn't fired yet"
+  // across page navigation within the same browser tab session.
+  const authorizedKey = `foster_pay_authorized_${offerId}`;
+
   useEffect(() => {
     let mounted = true;
     const load = async () => {
@@ -388,7 +392,19 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
         getActiveFeePercent(),
       ]);
       if (!mounted) return;
-      setPayReq(req);
+      // If we locally know the payment was authorized (Stripe returned
+      // requires_capture) but the webhook hasn't updated the DB yet, show
+      // "held" so the user doesn't see the card form re-appear on re-mount.
+      const locallyAuthorized = sessionStorage.getItem(authorizedKey) === '1';
+      if (req && req.status === 'pending' && locallyAuthorized) {
+        setPayReq({ ...req, status: 'held' });
+      } else {
+        setPayReq(req);
+        if (req && req.status === 'held') {
+          // Webhook fired — no longer need the local flag
+          sessionStorage.removeItem(authorizedKey);
+        }
+      }
       setFeePct(pct ?? 0);
       setLoading(false);
     };
@@ -429,10 +445,11 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
   // Called by the Stripe modal once funds are authorized
   const handleStripeAuthorized = () => {
     setStripeModalOpen(false);
-    // Optimistic update — don't wait for webhook
+    // Persist across re-mounts so navigating away/back doesn't show the card
+    // form again while we wait for the webhook to flip the DB row.
+    sessionStorage.setItem(authorizedKey, '1');
     setPayReq(p => p ? { ...p, status: 'held' } : p);
     // Re-fetch to sync with DB, but never downgrade held → pending
-    // (the webhook may not have fired within this window)
     setTimeout(() => {
       fetchPaymentRequest(offerId).then(req => {
         if (!req) return;
@@ -440,6 +457,7 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
           if (prev?.status === 'held' && req.status === 'pending') return prev;
           return req;
         });
+        if (req.status === 'held') sessionStorage.removeItem(authorizedKey);
       });
     }, 3000);
   };
@@ -557,7 +575,9 @@ const PaymentPanel: React.FC<PaymentPanelProps> = ({
                 <div className="space-y-2">
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-800 flex items-start gap-1.5">
                     <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
-                    Payment terms agreed. Fund escrow to protect both parties — your money is only released to the helper after you confirm the task is complete.
+                    {taskCompleted
+                      ? 'Task is complete but payment hasn\'t been funded yet. Authorize now to pay the helper for their work.'
+                      : 'Payment terms agreed. Fund escrow to protect both parties — your money is only released to the helper after you confirm the task is complete.'}
                   </div>
                   <button
                     onClick={handleHold}

@@ -52,10 +52,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Deleting the auth user cascades: auth.users → profiles → listings,
-    // offers, notifications, reliability_scores, etc. (ON DELETE CASCADE).
-    const { error: delError } = await db.auth.admin.deleteUser(user.id);
-    if (delError) throw delError;
+    // Delete via the Auth Admin REST API.
+    // supabase-js's auth.admin.deleteUser() uses a Node.js-specific code path
+    // that throws in the Deno edge runtime — call the endpoint directly instead.
+    const deleteRes = await fetch(
+      `${Deno.env.get('SUPABASE_URL')}/auth/v1/admin/users/${user.id}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'apikey': Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!}`,
+        },
+      },
+    );
+    if (!deleteRes.ok) {
+      const body = await deleteRes.json().catch(() => ({}));
+      throw new Error(body.msg ?? body.message ?? `Auth delete failed with status ${deleteRes.status}`);
+    }
 
     return json({ ok: true });
   } catch (e) {
