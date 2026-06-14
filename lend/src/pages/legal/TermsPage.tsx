@@ -57,14 +57,32 @@ export const TermsPage: React.FC = () => (
         <p>
           When you post a task or accept an offer, you are entering into a direct,
           private agreement with the other member. You are solely responsible for
-          evaluating the other party, agreeing on terms, exchanging payment (if any),
-          and complying with applicable laws. Foster does not guarantee outcomes,
-          quality, safety, or that any specific person will actually show up.
+          evaluating the other party, agreeing on terms, and complying with applicable
+          laws. Foster does not guarantee outcomes, quality, safety, or that any
+          specific person will actually show up.
         </p>
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">5. Ratings, reports, and removal</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">5. Payments and escrow</h2>
+        <p>
+          Paid tasks use an escrow model powered by Stripe. When a lister funds escrow,
+          Stripe places an authorization hold on their card. Funds are only captured and
+          transferred to the helper after the lister marks the task complete. Foster
+          charges a platform fee (shown before you confirm payment) that is deducted from
+          the total before the helper is paid. Fees, timing, and refund eligibility are
+          subject to Stripe's terms as well as ours.
+        </p>
+        <ul className="list-disc pl-6 mt-2 space-y-1">
+          <li>Cancelling a pending or held payment voids the authorization hold; no charge is made.</li>
+          <li>Once a payment is released, it cannot be reversed through Foster — contact Stripe support for disputes.</li>
+          <li>Helpers must connect a Stripe Express account to receive payouts; payout timing is governed by Stripe's payout schedule.</li>
+          <li>Foster is not responsible for Stripe outages, payment failures, or bank processing delays.</li>
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">6. Ratings, reports, and removal</h2>
         <p>
           We may remove content, suspend accounts, or refuse service for any reason,
           including violations of these terms, repeated negative ratings, or credible
@@ -74,7 +92,7 @@ export const TermsPage: React.FC = () => (
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">6. Disclaimer of warranties</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">7. Disclaimer of warranties</h2>
         <p>
           Foster is provided <em>as is</em>, without warranties of any kind, express or
           implied. We do not warrant that the service will be uninterrupted, error-free,
@@ -83,7 +101,7 @@ export const TermsPage: React.FC = () => (
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">7. Limitation of liability</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">8. Limitation of liability</h2>
         <p>
           To the maximum extent permitted by law, Foster and its operators are not
           liable for indirect, incidental, special, or consequential damages, or for
@@ -93,7 +111,7 @@ export const TermsPage: React.FC = () => (
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">8. Changes to these terms</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">9. Changes to these terms</h2>
         <p>
           We may update these terms from time to time. If we make material changes,
           we will provide notice in-app. Continued use after the changes take effect
@@ -102,9 +120,10 @@ export const TermsPage: React.FC = () => (
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 mb-2">9. Contact</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">10. Contact</h2>
         <p>
-          Questions about these terms? Reach out at <span className="font-mono text-sm">support@example.com</span>.
+          Questions about these terms? Reach out at{' '}
+          <a href="mailto:supportfoster@gmail.com" className="text-teal-600 hover:text-teal-700 font-mono text-sm">supportfoster@gmail.com</a>.
         </p>
       </div>
     </section>

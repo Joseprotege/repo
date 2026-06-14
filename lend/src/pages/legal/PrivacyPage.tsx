@@ -60,7 +60,7 @@ export const PrivacyPage: React.FC = () => (
           We do not sell your personal information. We share data only with:
         </p>
         <ul className="list-disc pl-6 mt-2 space-y-1">
-          <li><strong>Service providers</strong> we use to run the platform (e.g., Supabase for database/auth/storage, Vercel for hosting).</li>
+          <li><strong>Service providers</strong> we use to run the platform — Supabase (database, auth, storage), Vercel (hosting), Stripe (payment processing). Stripe receives payment card data and, for helpers, identity and bank account information required for payouts. Stripe's privacy policy governs that data.</li>
           <li><strong>Law enforcement</strong> when legally compelled or when we believe disclosure is necessary to prevent serious harm.</li>
           <li><strong>Other members</strong>, but only the public profile information described above.</li>
         </ul>
@@ -80,8 +80,8 @@ export const PrivacyPage: React.FC = () => (
         <p>
           Depending on where you live, you may have the right to access, correct,
           export, or delete your personal data, and to object to or restrict
-          certain processing. To exercise any of these rights, email
-          <span className="font-mono text-sm"> privacy@example.com</span>.
+          certain processing. To exercise any of these rights, email{' '}
+          <a href="mailto:supportfoster@gmail.com" className="text-teal-600 hover:text-teal-700 font-mono text-sm">supportfoster@gmail.com</a>.
         </p>
       </div>
 
