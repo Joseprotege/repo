@@ -77,6 +77,10 @@ export interface User {
   isOnline: boolean;
   verifiedEmail: boolean;
   verifiedId: boolean;
+  /** Platform moderator — can access the admin dashboard. */
+  isAdmin?: boolean;
+  /** Suspended by a moderator — blocked from posting, offering, broadcasting. */
+  isSuspended?: boolean;
 }
 
 // ─── Task Step ────────────────────────────────────────────────────────────────

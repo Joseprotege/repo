@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell, Plus, Search, Menu, X, Home, LayoutGrid,
-  User as UserIcon, LogOut, ChevronDown, Sparkles, LogIn,
+  User as UserIcon, LogOut, ChevronDown, Sparkles, LogIn, ShieldAlert,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
@@ -316,6 +316,15 @@ export const Navbar: React.FC = () => {
                     >
                       <LayoutGrid size={15} /> Dashboard
                     </Link>
+                    {currentUser.isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setProfileOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-teal-700 hover:bg-teal-50"
+                      >
+                        <ShieldAlert size={15} /> Moderation
+                      </Link>
+                    )}
                     <hr className="my-1 border-slate-100" />
                     <button
                       onClick={async () => {

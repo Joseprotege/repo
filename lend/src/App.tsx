@@ -5,6 +5,7 @@ import { AppProvider } from './context/AppContext';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Footer } from './components/layout/Footer';
+import { SuspendedBanner } from './components/common/SuspendedBanner';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { Toaster } from './components/common/Toaster';
 import { GlobalVoiceListener } from './components/app/GlobalVoiceListener';
@@ -26,6 +27,7 @@ const TermsPage    = lazy(() => import('./pages/legal/TermsPage').then(m => ({ d
 const PrivacyPage  = lazy(() => import('./pages/legal/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
 const ChatPage     = lazy(() => import('./pages/ChatPage').then(m => ({ default: m.ChatPage })));
 const FeePage      = lazy(() => import('./pages/FeePage').then(m => ({ default: m.FeePage })));
+const AdminPage    = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
 function RouteFallback() {
   return (
@@ -45,6 +47,7 @@ export default function App() {
           <GlobalVoiceListener />
           <div className="min-h-screen flex flex-col bg-slate-100">
             <Navbar />
+            <SuspendedBanner />
             <main className="flex-1">
               <Suspense fallback={<RouteFallback />}>
               <Routes>
@@ -69,6 +72,9 @@ export default function App() {
                 } />
                 <Route path="/chat/:offerId" element={
                   <ProtectedRoute><ChatPage /></ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute><AdminPage /></ProtectedRoute>
                 } />
 
                 {/* 404 */}

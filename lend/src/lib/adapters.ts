@@ -93,6 +93,8 @@ export function adaptProfile(
     isOnline: bool(profile.is_online),
     verifiedEmail: bool(profile.verified_email),
     verifiedId: bool(profile.verified_id),
+    isAdmin: bool(profile.is_admin),
+    isSuspended: bool(profile.is_suspended),
   };
 }
 
