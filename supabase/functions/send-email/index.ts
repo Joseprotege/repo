@@ -14,7 +14,23 @@
  *                             (use "onboarding@resend.dev" for early testing)
  */
 
-import { corsHeaders, errorResponse, jsonResponse } from '../_shared/cors.ts';
+// Self-contained — no shared imports (Edge Functions deploy as a single file).
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function jsonResponse(body: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+  });
+}
+
+function errorResponse(message: string, status = 400) {
+  return jsonResponse({ error: message }, { status });
+}
 
 const RESEND_API_KEY       = Deno.env.get('RESEND_API_KEY')!;
 const INTERNAL_EMAIL_SECRET = Deno.env.get('INTERNAL_EMAIL_SECRET')!;
